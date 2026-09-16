@@ -1,23 +1,88 @@
 # Learning Playwright Fundamentals
 
-This repository contains beginner-friendly Playwright tests written with `@playwright/test`.
+This repository contains beginner-friendly Playwright automation examples written with TypeScript. It covers Playwright basics, browser-context-page handling, test options, annotations, `test.describe()`, locator commands, assertions, and interview-focused notes.
 
-## 1. What is Playwright?
+## Repository Contents
 
-Playwright is an end-to-end testing framework for web applications. It lets you automate browsers such as Chromium, Firefox, and WebKit so you can test real user flows like opening pages, clicking buttons, filling forms, and checking page content.
+```text
+.
+├── Notes/
+│   └── PlaywrightNotes.md
+├── tests/
+│   ├── 01_Basics/
+│   ├── 02_TestAnnotations/
+│   └── 03_LocatorCommands/
+├── playwright.config.ts
+├── package.json
+└── README.md
+```
 
-## 2. Why Playwright is mostly used?
+## Latest Additions
 
-Playwright is widely used because it is fast, reliable, and supports modern browser automation features.
+- Added [Notes/PlaywrightNotes.md](Notes/PlaywrightNotes.md), a detailed interview preparation document.
+- The notes file has two main sections:
+  - **Notes**: Playwright concepts used in the current `.ts` files with explanations and examples.
+  - **Interview Questions**: Playwright with JavaScript/TypeScript interview questions and answers.
+- The notes file also includes an update reminder at the top so future additions to `tests/` should be reflected in both notes and interview questions.
 
-- It supports Chromium, Firefox, and WebKit.
-- It works with headed and headless browser modes.
-- It has auto-waiting, so tests are less flaky.
-- It supports screenshots, videos, traces, and HTML reports.
-- It can run tests in parallel.
-- It provides Codegen to generate test code by recording browser actions.
+## Topics Covered
 
-## 3. Playwright Setup
+The current test files cover:
+
+- Playwright Test Runner basics using `@playwright/test`
+- `test`, `expect`, `page`, and `browser` fixtures
+- Browser, browser context, and page model
+- Manual browser launch using `chromium`
+- Navigation with `page.goto()`
+- Navigation options like `timeout`, `referer`, `waitUntil: "load"`, and `waitUntil: "domcontentloaded"`
+- Context options such as viewport, locale, timezone, geolocation, and permissions
+- Mobile context simulation
+- Role locators with `getByRole()`
+- Test id locators with `getByTestId()`
+- CSS locators using IDs, classes, attributes, and tags
+- Chained and scoped locators
+- Positional locators using `nth()`
+- User actions such as `click()` and `fill()`
+- Assertions such as `toHaveTitle()`, `toBeVisible()`, and `toContainText()`
+- Regex-based assertions
+- Hard waits with `waitForTimeout()` and better waiting strategies
+- Cookie consent handling
+- Test grouping with `test.describe()`
+- Test annotations: `test.skip()`, `test.only()`, `test.fail()`, `test.fixme()`, and `test.slow()`
+- Multi-user and multi-context testing patterns
+
+## Test Files
+
+### Basics
+
+- `tests/01_Basics/01_example.spec.ts`
+- `tests/01_Basics/02_tta-check.spec.ts`
+- `tests/01_Basics/03_sciensus.spec.ts`
+- `tests/01_Basics/04_BCP.spec.ts`
+- `tests/01_Basics/05_Basics.spec.ts`
+- `tests/01_Basics/06_TestOptions.spec.ts`
+
+### Test Annotations
+
+- `tests/02_TestAnnotations/07_TestAnnotations.spec.ts`
+- `tests/02_TestAnnotations/08_TestDescribe.spec.ts`
+
+### Locator Commands
+
+- `tests/03_LocatorCommands/09_LocatorCommand.spec.ts`
+- `tests/03_LocatorCommands/10_BasicTest.spec.ts`
+
+## Playwright Notes
+
+Read [Notes/PlaywrightNotes.md](Notes/PlaywrightNotes.md) before interview preparation or revision. It is designed for Playwright with JavaScript/TypeScript interview preparation for a QA automation profile with strong testing experience.
+
+Whenever new `.ts` files are added under `tests/`, update:
+
+- The relevant topic explanation in the **Notes** section.
+- The related questions and answers in the **Interview Questions** section.
+- This README if new folders, files, or major concepts are added.
+
+## Setup
 
 Install project dependencies:
 
@@ -31,13 +96,13 @@ Install Playwright browsers:
 npx playwright install
 ```
 
-If you are starting a new Playwright project from scratch, you can use:
+If starting a new Playwright project from scratch, use:
 
 ```bash
 npm init playwright@latest
 ```
 
-## 4. How to run Playwright tests?
+## Running Tests
 
 Run all tests:
 
@@ -48,7 +113,19 @@ npx playwright test
 Run a specific test file:
 
 ```bash
-npx playwright test tests/sciensus.spec.ts
+npx playwright test tests/01_Basics/03_sciensus.spec.ts
+```
+
+Run tests from a specific folder:
+
+```bash
+npx playwright test tests/03_LocatorCommands
+```
+
+Run tests matching a title or describe block:
+
+```bash
+npx playwright test -g "Login Page Tests"
 ```
 
 Run tests in headed mode:
@@ -57,17 +134,28 @@ Run tests in headed mode:
 npx playwright test --headed
 ```
 
-Open the HTML report after a test run:
+Open the HTML report:
 
 ```bash
 npx playwright show-report
 ```
 
-## 5. How to use codegen command `playwright codegen <url>`?
+## Current Playwright Configuration
 
-Playwright Codegen records your browser actions and generates test code.
+The project uses [playwright.config.ts](playwright.config.ts) with these key settings:
 
-Use this command:
+- Test directory: `./tests`
+- Parallel execution: enabled with `fullyParallel: true`
+- CI safety: `forbidOnly` is enabled on CI
+- CI retries: `2`
+- Reporter: HTML report
+- Trace: `on-first-retry`
+- Browser project: Chromium with `Desktop Chrome`
+- Current config runs with `headless: false`
+
+## Codegen
+
+Playwright Codegen records browser actions and generates test code.
 
 ```bash
 npx playwright codegen <url>
@@ -79,4 +167,12 @@ Example:
 npx playwright codegen https://www.sciensus.com/
 ```
 
-After running the command, a browser window opens. Perform the actions you want to test, and Playwright will generate locator-based test code that you can copy into a spec file.
+After running the command, a browser window opens. Perform the actions you want to test, and Playwright generates locator-based test code that can be used in a spec file.
+
+## Recommended Learning Flow
+
+1. Start with files under `tests/01_Basics`.
+2. Read `Notes/PlaywrightNotes.md` alongside the test examples.
+3. Practice annotations from `tests/02_TestAnnotations`.
+4. Practice locator strategies from `tests/03_LocatorCommands`.
+5. Revise the **Interview Questions** section before Playwright interviews.
