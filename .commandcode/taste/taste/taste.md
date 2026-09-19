@@ -1,0 +1,14 @@
+# Taste
+- Wants concept documentation generated from the codebase, kept in a persistent notes file that is updated over time as new source files/topics are added. Confidence: 0.8
+- Prefers notes files structured with two explicit sections: "Notes" (concepts with proper headings, explanations, and examples) and "Interview Questions" (possible questions with relevant answers). Confidence: 0.8
+- Wants a standing instruction written at the top of the notes file (e.g., "whenever this file is updated, both Notes and Interview Questions must be updated together") so the same rule doesn't have to be restated in every prompt. Confidence: 0.7
+- Documentation is framed toward interview preparation for a specific seniority/experience level. Confidence: 0.6
+- Wants the README kept up to date with the latest additions to the repository. Confidence: 0.7
+- Likes README content organized as an explicit numbered list of topics to cover (e.g., what it is, why it's used, setup, how to run tests, codegen usage). Confidence: 0.6
+- Wants explanatory comment sections added below the code inside source/spec files, describing the usage of each concept/annotation used in that file with an example and a brief explanation, so the file is self-explanatory when re-read. Confidence: 0.8
+- Prefers the browser window to be maximized — both explicitly in tests after navigation (e.g., after `page.goto`) and via config so every browser opens maximized. Confidence: 0.7
+- Uses GitHub repositories to host and push the project code. Confidence: 0.6
+- Gives terse, targeted instructions referencing specific files/lines when reporting issues to fix. Confidence: 0.7
+- Prefers the agent to make code changes without running the tests/scripts to verify them — the user runs and verifies the tests themselves. Confidence: 0.8
+- Prefers dynamic/derived values over hardcoded literals in test data (e.g., computing today's date at runtime instead of a fixed day). Confidence: 0.5
+- Expects requested changes to actually be applied; re-requests work when changes are not visible. Confidence: 0.6
