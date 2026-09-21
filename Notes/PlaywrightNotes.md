@@ -14,6 +14,8 @@ Source files currently covered:
 - `tests/02_TestAnnotations/08_TestDescribe.spec.ts`
 - `tests/03_LocatorCommands/09_LocatorCommand.spec.ts`
 - `tests/03_LocatorCommands/10_BasicTest.spec.ts`
+- `tests/03_LocatorCommands/11_hw_Login_validation.spec.ts`
+- `tests/03_LocatorCommands/12_hw_errorValidation.spec.ts`
 
 ## Notes
 
@@ -308,6 +310,8 @@ The tests use:
 - Role locators: `getByRole(...)`
 - Test id locators: `getByTestId(...)`
 - CSS locators: `locator(...)`
+- XPath locators: `locator('//...')`
+- Text locators: `getByText(...)`
 - Chained locators
 - Positional locators with `nth(...)`
 
@@ -318,6 +322,8 @@ Good locator strategy, from most user-focused to more technical:
 - Use `getByTestId()` for stable automation hooks.
 - Use CSS selectors when no better user-facing locator is available.
 - Avoid XPath and brittle positional selectors unless there is a specific reason.
+
+For a full reference covering every locator type, `filter()`, `and()`/`or()`, iframes, and strictness, see `tests/03_LocatorCommands/PlaywrightLocators.md`.
 
 ### 11. Role Locators With `getByRole()`
 
@@ -344,6 +350,24 @@ Why this is strong:
 - It makes test intent readable.
 
 Interview point: `name` in `getByRole()` is the accessible name, not always the visible text. It can come from text content, `aria-label`, `aria-labelledby`, `alt`, associated labels, and other accessibility rules.
+
+#### Name Matching Rules
+
+By default, `name` matching is case-insensitive and matches a substring. In `12_hw_errorValidation.spec.ts`, both of these rely on that:
+
+```ts
+await page.getByRole("textbox", { name: "email" }).fill("admin");                // matches a textbox named "Email"
+await page.getByRole("checkbox", { name: "I agree to Wingify's" }).check();       // matches a longer checkbox label
+```
+
+Use `exact: true` for a case-sensitive, full-string match, or a regular expression for pattern matching:
+
+```ts
+page.getByRole('button', { name: 'Create a Free Trial Account', exact: true });
+page.getByRole('button', { name: /free trial/i });
+```
+
+Substring matching is convenient, but a short name like `email` can match more than one element. When a locator matches several elements, Playwright's strict mode throws on actions instead of picking one. Fix it by using a more specific name, `exact: true`, or a scoped locator.
 
 ### 12. Scoped and Chained Locators
 
@@ -502,6 +526,10 @@ Important assertion types:
 - `toBeVisible()`: validates that a locator resolves to a visible element.
 - `toContainText(...)`: validates partial text content.
 - `toBeGreaterThan(...)`: validates numeric comparison.
+- `not.toBe(...)`: validates that a plain value is different from another value.
+- `toContain(...)`: validates that a plain string contains a substring, or an array contains an item.
+
+The last three are generic assertions on plain values and do not retry. See section 30 for how they differ from web-first assertions.
 
 Playwright web-first assertions auto-wait until the condition passes or times out. This reduces the need for manual waits.
 
@@ -715,7 +743,210 @@ Good negative test checks:
 - Sensitive details are not exposed.
 - The login button or form state behaves correctly.
 
-### 26. Senior QA Automation Mindset for These Topics
+### 26. XPath Locators
+
+`11_hw_Login_validation.spec.ts` uses XPath:
+
+```ts
+await page.locator("//input[@id='email']").fill("admin@admin.com");
+await page.locator("//input[@id='password']").fill("admin");
+await page.locator("//button[@class='login-btn']").click();
+```
+
+Playwright treats a selector that starts with `//` or `..` as XPath automatically. The `xpath=` prefix makes it explicit:
+
+```ts
+page.locator("xpath=//input[@id='email']");
+```
+
+Common XPath patterns:
+
+- `//tag[@attr='value']`: element whose attribute equals the value exactly.
+- `//tag[contains(@attr, 'part')]`: attribute contains a substring.
+- `//tag[text()='Login']`: element whose own text is exactly `Login`.
+- `//tag[contains(text(), 'Log')]`: element text contains a substring.
+- `//div[@id='form']//input`: any `input` inside the form container.
+- `//input[@id='email']/..` or `/parent::*`: the parent element.
+- `//label[text()='Email']/following-sibling::input`: the next sibling `input` after a label.
+
+Relative XPath (`//input[@id='email']`) searches from anywhere in the document. Absolute XPath (`/html/body/div[2]/form/input[1]`) starts from the root and breaks when any wrapper element changes, so avoid it.
+
+`@class='login-btn'` compares the whole `class` attribute string. If the button later becomes `class="login-btn primary"`, the locator stops matching. `contains(@class, 'login-btn')` or the CSS form `.login-btn` handles multiple classes.
+
+The same elements with simpler locators:
+
+```ts
+page.locator('#email');
+page.locator('#password');
+page.locator('.login-btn');
+// or, if the inputs have labels and the button has visible text:
+page.getByRole('textbox', { name: 'Email' });
+page.getByRole('button', { name: 'Login' });
+```
+
+Limits of XPath in Playwright:
+
+- XPath does not pierce shadow DOM. CSS and `getBy*` locators do pierce open shadow roots.
+- XPath is tied to DOM structure and attribute names, not to what the user sees.
+- Long XPath expressions are hard to read and review.
+
+XPath is still reasonable for legacy apps without accessible roles or test IDs, for moving to a parent, ancestor, or sibling, and for conditions that are awkward in CSS.
+
+### 27. Checkbox Actions With `check()`
+
+`12_hw_errorValidation.spec.ts` ticks two consent checkboxes:
+
+```ts
+await page.getByRole("checkbox", { name: "Yes, I agree to receive communications from Wingify. I can opt-out at any time." }).check();
+await page.getByRole("checkbox", { name: "I agree to Wingify's" }).check();
+```
+
+What `check()` does:
+
+- If the checkbox is already checked, it returns immediately without clicking.
+- Otherwise it waits for actionability, clicks, and then verifies the checkbox is now checked. If it is not, it throws.
+
+`click()` toggles. Clicking an already-checked box unchecks it, so a test that uses `click()` can end up in the wrong state if the page remembers a previous choice. `check()` states the intended final state.
+
+Related methods and assertions:
+
+```ts
+const consent = page.getByRole('checkbox', { name: "I agree to Wingify's" });
+
+await consent.uncheck();
+await consent.setChecked(true);        // useful when the desired state comes from test data
+await expect(consent).toBeChecked();
+await expect(consent).not.toBeChecked();
+```
+
+`check()` also works for radio buttons.
+
+### 28. Text Locators and Reading Text From the Page
+
+`12_hw_errorValidation.spec.ts` finds an error by its text and reads the text out:
+
+```ts
+let errormsg = await page.getByText("The email address you entered is incorrect.").textContent();
+```
+
+`getByText()`:
+
+- Finds elements by their text content.
+- By default, matching is case-insensitive, matches a substring, and normalizes whitespace.
+- `exact: true` makes it a case-sensitive, full-string match. A regex also works.
+- Best for non-interactive content such as messages, paragraphs, and labels. For buttons and links, prefer `getByRole()`.
+
+```ts
+page.getByText('The email address you entered is incorrect.');
+page.getByText('The email address you entered is incorrect.', { exact: true });
+page.getByText(/email address .* incorrect/i);
+```
+
+Methods that read text or values from an element:
+
+- `textContent()`: returns `Promise<string | null>`. It is the raw DOM `textContent`, so it includes text from hidden child elements and keeps original whitespace.
+- `innerText()`: returns the rendered text, which respects CSS such as hidden elements and line breaks.
+- `inputValue()`: returns the current value of an `input`, `textarea`, or `select`. Use this for form fields, not `textContent()`.
+- `allTextContents()` / `allInnerTexts()`: return an array of text for every matching element.
+
+These methods wait for the element to be attached, but they read the value once. They do not check visibility and do not retry until the text is correct. Use them when you need the value for something else, such as logging, comparing with another value, or calculations. For verification, use a web-first assertion such as `toHaveText()` or `toBeVisible()`.
+
+### 29. Reading and Verifying the Current URL
+
+`11_hw_Login_validation.spec.ts` checks that the URL changes after login:
+
+```ts
+let initialURL: string = "https://app.thetestingacademy.com/playwright/multiple_element_filter";
+
+await page.goto(initialURL);
+// ... fill email and password, click login ...
+let changedURL: string = await page.url();
+
+await expect(changedURL).not.toBe(initialURL);
+```
+
+Points to know:
+
+- `page.url()` is synchronous and returns a `string`. The `await` is harmless but unnecessary.
+- Reading the URL once right after `click()` can capture it before the app has finished navigating. This is common when login calls an API and then redirects on the client side. The result then depends on timing.
+- `not.toBe(initialURL)` passes for any different URL, including an error page. Asserting the expected destination is stronger.
+
+Better approach:
+
+```ts
+await page.locator("//button[@class='login-btn']").click();
+
+await expect(page).not.toHaveURL(initialURL);   // retries until the URL changes
+await expect(page).toHaveURL(/dashboard/);       // stronger, if the destination is known
+```
+
+`page.waitForURL(/dashboard/)` also waits for the URL, but it is a wait, not an assertion. Use `expect(page).toHaveURL()` when the URL is the thing being verified.
+
+TypeScript note: `initialURL` and `changedURL` are never reassigned, so `const` is a better fit than `let`. `const` signals that the value will not change and prevents accidental reassignment.
+
+### 30. Generic Assertions vs Web-First Assertions
+
+Both new tests call `expect()` on plain values instead of on `page` or a locator:
+
+```ts
+await expect(changedURL).not.toBe(initialURL);   // 11_hw_Login_validation.spec.ts
+expect(actualMsg).toContain(errormsg);           // 12_hw_errorValidation.spec.ts
+```
+
+Playwright has two kinds of assertions:
+
+| | Generic assertions | Web-first assertions |
+|---|---|---|
+| Called on | a plain value: string, number, array, object | `page` or a locator |
+| Examples | `toBe`, `toEqual`, `toContain`, `toBeGreaterThan`, `toBeTruthy` | `toBeVisible`, `toHaveText`, `toContainText`, `toHaveURL`, `toHaveTitle`, `toBeChecked` |
+| Waiting | checks once | retries until the condition passes or the expect timeout (5 seconds by default) is reached |
+| `await` | not needed, they are synchronous | required |
+
+Common generic matchers:
+
+- `toBe(value)`: strict equality using `Object.is`. Use for strings, numbers, and booleans.
+- `toEqual(value)`: deep equality. Use for objects and arrays.
+- `toContain(item)`: a string contains a substring, or an array contains an item.
+- `.not`: inverts any matcher, generic or web-first.
+
+#### Argument Order
+
+The pattern is `expect(actual).matcher(expected)`. In `12_hw_errorValidation.spec.ts`, the arguments are reversed:
+
+```ts
+let errormsg = await page.getByText("The email address you entered is incorrect.").textContent();  // actual, read from the page
+let actualMsg = "The email address you entered is incorrect.";                                      // expected, hard-coded
+expect(actualMsg).toContain(errormsg);
+```
+
+This asks whether the hard-coded string contains the text read from the page. If the element's `textContent` includes extra whitespace or extra text, for example `"\n  The email address you entered is incorrect.\n"`, the hard-coded string does not contain it and the test fails even though the correct error is shown. The variable names are also swapped: `actualMsg` holds the expected value.
+
+The correct order would be:
+
+```ts
+expect(errormsg).toContain(expectedMsg);
+```
+
+The test also has two weaker points:
+
+- It finds the element by the same text it then checks, so the assertion adds little. If the text were missing, `textContent()` would already fail by timing out.
+- `textContent()` does not check visibility, so an error element that is present in the DOM but hidden would still pass.
+
+A web-first version is shorter and checks what the user actually sees:
+
+```ts
+await expect(page.getByText('The email address you entered is incorrect.')).toBeVisible();
+```
+
+Or, if the error has a stable container (the selector below is illustrative):
+
+```ts
+await expect(page.locator('.error-message')).toHaveText('The email address you entered is incorrect.');
+```
+
+Rule of thumb: when the value lives on the page, assert on the page or locator, not on a value you read out of it.
+
+### 31. Senior QA Automation Mindset for These Topics
 
 For a 10-year testing profile and 5-year Playwright automation profile, interviewers usually expect more than syntax. They look for judgment.
 
@@ -723,7 +954,11 @@ Strong answers should mention:
 
 - Prefer user-facing locators such as role, label, and text.
 - Use test IDs when UI text is unstable or localized.
+- Prefer role and CSS locators over XPath. Use XPath for legacy DOM or parent and sibling traversal, and never use absolute XPath.
 - Avoid hard waits like `waitForTimeout()` in committed tests.
+- Assert on `page` and locators with web-first assertions instead of reading values out with `textContent()` or `page.url()` and checking them once.
+- Keep the `expect(actual).matcher(expected)` order.
+- Use `check()` and `uncheck()` for checkboxes instead of `click()`.
 - Use browser contexts for isolation and multi-user scenarios.
 - Keep tests independent and parallel-safe.
 - Remove `test.only()` before pushing code.
@@ -1369,6 +1604,186 @@ Check the failure message, inspect trace viewer, review screenshots and videos, 
 
 Identify whether the cause is locator instability, timing, data dependency, environment issue, animation, network delay, or shared state. Then fix the root cause using better locators, web-first assertions, isolated data, proper waits, or improved setup.
 
-#### 108. What are the most important Playwright concepts from these tests?
+### XPath Locators
 
-The key concepts are test runner usage, fixtures, browser-context-page architecture, async/await, navigation options, context options, mobile emulation, role/test id/CSS locators, chained locators, assertions, waits, test grouping, annotations, and multi-context testing.
+#### 108. How do you use XPath in Playwright?
+
+Pass the XPath expression to `page.locator()`.
+
+```ts
+await page.locator("//input[@id='email']").fill("admin@admin.com");
+await page.locator("//button[@class='login-btn']").click();
+```
+
+#### 109. How does Playwright know a selector is XPath and not CSS?
+
+Selectors that start with `//` or `..` are treated as XPath automatically. You can also make it explicit with the `xpath=` prefix, for example `page.locator("xpath=//input[@id='email']")`.
+
+#### 110. What is the difference between absolute and relative XPath?
+
+Absolute XPath starts from the document root, such as `/html/body/div[2]/form/input[1]`. It breaks when any element in that path changes. Relative XPath starts with `//` and searches anywhere, such as `//input[@id='email']`. Always prefer relative XPath.
+
+#### 111. Why is `//button[@class='login-btn']` fragile?
+
+`@class='login-btn'` must match the entire `class` attribute. If another class is added, such as `class="login-btn primary"`, the locator no longer matches. Use `//button[contains(@class, 'login-btn')]`, the CSS locator `.login-btn`, or better, `getByRole('button', { name: 'Login' })`.
+
+#### 112. Do you prefer XPath or CSS locators? Why?
+
+CSS, and user-facing locators above both. CSS is shorter, easier to read, and pierces open shadow DOM in Playwright. XPath is useful when I need to move to a parent, ancestor, or sibling, or match on conditions that CSS cannot express easily.
+
+#### 113. Does XPath work inside shadow DOM in Playwright?
+
+No. XPath does not pierce shadow roots. CSS and `getBy*` locators pierce open shadow roots by default.
+
+#### 114. Write an XPath to find an input that follows a label with the text "Email".
+
+```ts
+page.locator("//label[text()='Email']/following-sibling::input");
+```
+
+Other useful axes are `parent::`, `ancestor::`, `preceding-sibling::`, and `descendant::`.
+
+#### 115. What is the difference between `text()='Login'` and `contains(text(), 'Log')` in XPath?
+
+`text()='Login'` matches when the element's own text is exactly `Login`. `contains(text(), 'Log')` matches when the text contains `Log` anywhere. The contains form tolerates extra text or whitespace, but it can match more elements.
+
+### Checkboxes and Form Controls
+
+#### 116. How do you select a checkbox in Playwright?
+
+Use `check()`.
+
+```ts
+await page.getByRole("checkbox", { name: "I agree to Wingify's" }).check();
+```
+
+#### 117. What is the difference between `check()` and `click()` on a checkbox?
+
+`click()` toggles the checkbox, so clicking one that is already checked unchecks it. `check()` does nothing if the box is already checked. Otherwise it clicks and then verifies the box is checked, throwing if it is not.
+
+#### 118. How do you assert that a checkbox is checked or unchecked?
+
+```ts
+await expect(checkbox).toBeChecked();
+await expect(checkbox).not.toBeChecked();
+```
+
+#### 119. How do you set a checkbox based on test data?
+
+Use `setChecked()`, which accepts a boolean.
+
+```ts
+await checkbox.setChecked(user.acceptsMarketing);
+```
+
+### Role Name Matching and Text Locators
+
+#### 120. Is the `name` option in `getByRole()` an exact match?
+
+No. By default it is case-insensitive and matches a substring, so `{ name: "email" }` matches a textbox named `Email`. Use `exact: true` for an exact, case-sensitive match, or pass a regular expression.
+
+#### 121. What happens if a locator matches more than one element?
+
+Playwright's strict mode throws an error on actions such as `click()` and `fill()` and on single-element assertions such as `toBeVisible()`. Fix it with a more specific name, `exact: true`, a scoped locator, `filter()`, or a test ID. Use `first()` or `nth()` only when order is actually meaningful.
+
+#### 122. What does `getByText()` do, and when should you use it?
+
+It finds elements by text content. By default it is case-insensitive, matches a substring, and normalizes whitespace. Use it for non-interactive content such as messages and paragraphs. For buttons and links, `getByRole()` is better.
+
+#### 123. What is the difference between `textContent()`, `innerText()`, and `inputValue()`?
+
+`textContent()` returns the raw DOM text, including hidden child elements and original whitespace. Its TypeScript type is `Promise<string | null>`. `innerText()` returns the rendered text as the user sees it. `inputValue()` returns the current value of an input, textarea, or select.
+
+#### 124. Why is reading `textContent()` and then asserting on it weaker than `toHaveText()`?
+
+`textContent()` reads the value once and does not check visibility. If the text updates a moment later, or the element is hidden, the test can give the wrong result. `toHaveText()` and `toContainText()` retry until the text matches or the timeout is reached.
+
+### URLs and Assertions
+
+#### 125. How do you get the current page URL?
+
+Use `page.url()`. It is synchronous and returns a `string`, so it does not need `await`.
+
+```ts
+const currentUrl = page.url();
+```
+
+#### 126. How do you verify that the URL changed after submitting a form?
+
+Use a web-first URL assertion, which retries until the URL changes.
+
+```ts
+await expect(page).not.toHaveURL(initialURL);
+await expect(page).toHaveURL(/dashboard/);   // stronger, if the destination is known
+```
+
+#### 127. Why can reading `page.url()` immediately after `click()` be flaky?
+
+The app may not have finished navigating yet, especially when login calls an API and then redirects on the client side. `page.url()` returns whatever the URL is at that moment, so the test result depends on timing.
+
+#### 128. What is the difference between `page.waitForURL()` and `expect(page).toHaveURL()`?
+
+`waitForURL()` waits for the page to reach a URL and, by default, for the load event. It is a synchronization step. `toHaveURL()` is an assertion that retries and reports a clear assertion failure. Use `toHaveURL()` when the URL is the thing being verified.
+
+#### 129. What is the difference between generic assertions and web-first assertions?
+
+Generic assertions such as `toBe()`, `toEqual()`, and `toContain()` run on plain values and check once. Web-first assertions such as `toBeVisible()`, `toHaveText()`, and `toHaveURL()` run on `page` or a locator and retry until the condition passes or times out.
+
+#### 130. Do you need `await` before `expect()`?
+
+Only for web-first and other async assertions, such as `expect(locator).toBeVisible()`, `expect.poll()`, and `expect(...).toPass()`. Generic assertions on plain values are synchronous. `await expect(changedURL).not.toBe(initialURL)` works, but the `await` does nothing.
+
+#### 131. What is the difference between `toBe()` and `toEqual()`?
+
+`toBe()` checks strict equality using `Object.is`, which suits strings, numbers, and booleans. `toEqual()` checks deep equality and is used for objects and arrays. Two different objects with the same fields fail `toBe()` but pass `toEqual()`.
+
+#### 132. What does `.not` do in an assertion?
+
+It inverts the matcher. `expect(value).not.toBe(x)` passes when `value` is not `x`. It works with web-first assertions too, such as `expect(locator).not.toBeVisible()`, which retries until the element is hidden.
+
+#### 133. What is wrong with `expect(actualMsg).toContain(errormsg)` when `actualMsg` is the hard-coded text and `errormsg` is read from the page?
+
+The arguments are reversed. The pattern is `expect(actual).matcher(expected)`. As written, it checks whether the hard-coded string contains the page text, so extra whitespace or extra text on the page makes it fail even when the correct error is shown. It should be `expect(errormsg).toContain(expectedMsg)`, or better, a web-first assertion on the locator.
+
+#### 134. What does `toContain()` check?
+
+For a string, it checks that the string contains a substring. For an array, it checks that the array contains an item.
+
+```ts
+expect('Invalid email address').toContain('email');
+expect(['admin', 'user']).toContain('admin');
+```
+
+### Scenario-Based Questions on Locators and Validation
+
+#### 135. How would you automate a free-trial signup form that should reject an invalid email?
+
+Enter an invalid email, tick the required consent checkboxes with `check()`, submit, and assert that the error message is visible.
+
+```ts
+await page.goto('https://wingify.com/free-trial/');
+await page.getByRole('textbox', { name: 'email' }).fill('admin');
+await page.getByRole('checkbox', { name: "I agree to Wingify's" }).check();
+await page.getByRole('button', { name: 'Create a Free Trial Account' }).click();
+
+await expect(page.getByText('The email address you entered is incorrect.')).toBeVisible();
+```
+
+I would also check that the user stays on the signup page and that no account is created.
+
+#### 136. Review this test. What would you change?
+
+```ts
+let changedURL: string = await page.url();
+await expect(changedURL).not.toBe(initialURL);
+```
+
+- Replace the one-time URL read with `await expect(page).not.toHaveURL(initialURL)` so it retries while navigation completes.
+- Assert the expected destination with `toHaveURL()` instead of only "not the same URL", because an error page would also pass.
+- Remove the unnecessary `await` on `page.url()` and on the generic assertion.
+- Use `const` for values that are not reassigned.
+- Replace `//button[@class='login-btn']` with a role or CSS locator that survives extra classes.
+
+#### 137. What are the most important Playwright concepts from these tests?
+
+The key concepts are test runner usage, fixtures, browser-context-page architecture, async/await, navigation options, context options, mobile emulation, role/test id/CSS/XPath/text locators, role name matching, chained locators, checkbox actions, reading text and URLs, generic vs web-first assertions, waits, test grouping, annotations, and multi-context testing.

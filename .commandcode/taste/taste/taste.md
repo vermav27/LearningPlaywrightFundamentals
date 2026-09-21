@@ -11,4 +11,7 @@
 - Gives terse, targeted instructions referencing specific files/lines when reporting issues to fix. Confidence: 0.7
 - Prefers the agent to make code changes without running the tests/scripts to verify them — the user runs and verifies the tests themselves. Confidence: 0.8
 - Prefers dynamic/derived values over hardcoded literals in test data (e.g., computing today's date at runtime instead of a fixed day). Confidence: 0.5
+- Wants reference documentation stored as a markdown file inside the folder covering that topic (e.g., a locators doc under the corresponding locator-commands test folder). Confidence: 0.5
+- When asking for a reference doc on a feature/API, expects exhaustive coverage of every item in that category — not a curated subset. Confidence: 0.6
+- Prefers docs written in a "very easy", beginner-friendly format that shows how to use each item, not just what it is. Confidence: 0.6
 - Expects requested changes to actually be applied; re-requests work when changes are not visible. Confidence: 0.6
