@@ -1,7 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { env } from 'node:process';
-
-const isCI = !!env.CI;
+const isCI = !!(globalThis as { process?: { env?: { CI?: string } } }).process?.env?.CI;
 
 /**
  * Read environment variables from file.
