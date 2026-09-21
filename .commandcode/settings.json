@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(git add -A && git commit -F - <<'EOF' docs: expand Playwright notes with locators, URL and assertion coverage Add XPath, text locators, checkbox actions, URL reading, and generic vs web-first assertion sections, plus interview Q&A on the new topics. Co-authored-by: CommandCodeBot <noreply@commandcode.ai> EOF)",
+      "Shell(git rm --cached .commandcode/settings.json -q && git commit --amend -F - <<'EOF' docs: expand Playwright notes with locators, URL and assertion coverage Add XPath, text locators, checkbox actions, URL reading, and generic vs web-first assertion sections, plus interview Q&A on the new topics. Co-authored-by: CommandCodeBot <noreply@commandcode.ai> EOF)",
+      "Shell(git:*)"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}
