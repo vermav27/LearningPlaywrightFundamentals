@@ -3,7 +3,19 @@
     "allow": [
       "Shell(git add -A && git commit -F - <<'EOF' docs: expand Playwright notes with locators, URL and assertion coverage Add XPath, text locators, checkbox actions, URL reading, and generic vs web-first assertion sections, plus interview Q&A on the new topics. Co-authored-by: CommandCodeBot <noreply@commandcode.ai> EOF)",
       "Shell(git rm --cached .commandcode/settings.json -q && git commit --amend -F - <<'EOF' docs: expand Playwright notes with locators, URL and assertion coverage Add XPath, text locators, checkbox actions, URL reading, and generic vs web-first assertion sections, plus interview Q&A on the new topics. Co-authored-by: CommandCodeBot <noreply@commandcode.ai> EOF)",
-      "Shell(git:*)"
+      "Shell(git:*)",
+      "Shell(npx playwright test tests/04_SessionStorage/14_TestOrange.spec.ts)",
+      "Shell(cat:*)",
+      "Shell(echo:*)",
+      "Shell(npx tsx tests/04_SessionStorage/13_SessionStorage.ts)",
+      "Shell(node tests/04_SessionStorage/13_SessionStorage.ts 2 >& 1)",
+      "Shell(node --experimental-default-type=module tests/04_SessionStorage/13_SessionStorage.ts 2 >& 1)",
+      "Shell(cp:*)",
+      "Shell(node tests/04_SessionStorage/__run_session.mts 2 >& 1)",
+      "Shell(ls -la user-session.json 2>&1; echo \"---procs---\"; ps aux | grep -iE \"13_SessionStorage|__run_session|chromium|headless_shell\" | grep -v grep | head -20)",
+      "Shell(rm:*)",
+      "Shell(node tests/04_SessionStorage/__run_session.mts)",
+      "Shell(grep -oE \"^[A-Za-z_][A-Za-z0-9_]*\" .env 2>/dev/null; echo \"---\"; env | grep -E \"^(USERNAME|PASSWORD)=\" | sed 's/=.*/=<set>/')"
     ],
     "deny": [],
     "defaultMode": "default"
