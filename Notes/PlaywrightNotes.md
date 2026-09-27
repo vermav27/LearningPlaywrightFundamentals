@@ -16,6 +16,15 @@ Source files currently covered:
 - `tests/03_LocatorCommands/10_BasicTest.spec.ts`
 - `tests/03_LocatorCommands/11_hw_Login_validation.spec.ts`
 - `tests/03_LocatorCommands/12_hw_errorValidation.spec.ts`
+- `tests/04_SessionStorage/13_SessionStorage.ts`
+- `tests/04_SessionStorage/14_TestOrange.spec.ts`
+- `tests/05_Reporter/15_TestOrange_CustomReport.spec.ts`
+- `tests/05_Reporter/16_TestOrange_AllureReport.spec.ts`
+- `tests/06_MultipleElements/17_MultipleElements.spec.ts`
+- `tests/07_WebTable/20_WebTable.spec.ts`
+- `tests/07_WebTable/21_commonFunction.ts`
+- `tests/07_WebTable/22_ChecktheRecord.spec.ts`
+- `utils/CustomReporter.ts`
 
 ## Notes
 
@@ -970,6 +979,180 @@ Strong answers should mention:
 - Use meaningful test names and grouping.
 - Prefer reusable helpers or page objects as the framework grows.
 
+### 32. Session Storage and Reusing Login State
+
+The files `13_SessionStorage.ts` and `14_TestOrange.spec.ts` demonstrate saving an authenticated OrangeHRM browser state and reusing it in tests.
+
+`13_SessionStorage.ts` uses the lower-level Playwright API to launch Chromium, log in, wait for the dashboard, and save the browser context state to `user-session.json`.
+
+```ts
+await browserContext.storageState({ path: './user-session.json' });
+```
+
+`14_TestOrange.spec.ts` imports `saveSession()` and uses the saved state:
+
+```ts
+import { saveSession } from './13_SessionStorage';
+
+test.beforeAll(async ({}, testInfo) => {
+  testInfo.setTimeout(90000);
+  await saveSession();
+});
+
+test.use({
+  storageState: './user-session.json',
+});
+```
+
+Important points:
+
+- `storageState` lets tests start as an already logged-in user.
+- The session must be created before tests that depend on it.
+- If `saveSession()` is called at the top level without `await`, tests may start before `user-session.json` is ready.
+- A `beforeAll` hook can prepare state before tests in the file run.
+- `dotenv.config({ override: true })` ensures `.env` values are used even when the shell already has variables like `USERNAME`.
+- For larger frameworks, Playwright's setup-project dependency pattern is usually cleaner than generating login state inside every spec.
+
+### 33. Custom Reporter and Artifacts
+
+The file `utils/CustomReporter.ts` implements a custom Playwright reporter using the reporter API from `@playwright/test/reporter`.
+
+The reporter listens to lifecycle events such as:
+
+- `onBegin`: test run starts.
+- `onTestBegin`: a test starts.
+- `onStepBegin` and `onStepEnd`: a `test.step()` starts or ends.
+- `onTestEnd`: a test finishes and attachments can be collected.
+- `onEnd`: the full run finishes and the final HTML report is written.
+
+The project config currently uses:
+
+```ts
+reporter: [['line'], ['allure-playwright'], ['./utils/CustomReporter.ts']],
+```
+
+The custom report is generated in `custom-report/`. It copies screenshots, videos, and traces from Playwright attachments into report folders when those artifacts are available.
+
+Artifact settings are controlled from config:
+
+```ts
+use: {
+  screenshot: 'on',
+  video: 'on',
+  trace: 'on',
+}
+```
+
+For everyday execution, `trace: 'on-first-retry'` is lighter. For demo reporting or debugging, `trace: 'on'`, `screenshot: 'on'`, and `video: 'on'` capture more evidence.
+
+The custom report also demonstrates practical HTML/CSS report concerns:
+
+- A dark-blue header for `Custom Automation Report`.
+- A light-orange base page background.
+- A horizontally scrollable test results table.
+- Visible custom scrollbar styling.
+- Links to screenshots, videos, and trace files.
+
+### 34. Allure Reporter
+
+`16_TestOrange_AllureReport.spec.ts` uses the same OrangeHRM dashboard validation scenario but is intended for Allure reporting.
+
+Allure has two stages:
+
+1. Playwright writes raw results into `allure-results/`.
+2. `allure-commandline` generates an HTML report from those results.
+
+Useful commands:
+
+```bash
+npx playwright test tests/05_Reporter/16_TestOrange_AllureReport.spec.ts --workers=1
+npx allure generate allure-results --clean -o allure-report
+npx allure open allure-report
+```
+
+Allure is useful when teams want trend reports, categories, suites, labels, attachments, and CI-friendly report publishing.
+
+### 35. Handling Multiple Matching Elements
+
+`17_MultipleElements.spec.ts` shows how to work with lists of elements.
+
+`allInnerTexts()` returns an array of rendered text values:
+
+```ts
+const labels = await page.locator("//div[@class='list-group']/a").allInnerTexts();
+```
+
+`all()` returns an array of `Locator` objects:
+
+```ts
+const links = await page.locator("//div[@class='list-group']/a").all();
+
+for (const link of links) {
+  const href = await link.getAttribute('href');
+  console.log(href);
+}
+```
+
+Important distinction:
+
+- Use `allInnerTexts()` when you need text values.
+- Use `all()` when you need to perform actions or read attributes from each matching element.
+- Use `count()` plus `nth(i)` when the list may change while the test is running.
+- Avoid hard waits such as `waitForTimeout()` in real framework code; prefer assertions or page state waits.
+
+### 36. Text Reading Methods
+
+The markdown notes in `tests/06_MultipleElements` compare common text methods.
+
+Common choices:
+
+- `innerText()`: rendered visible text for one locator.
+- `textContent()`: raw DOM text, can include hidden text and returns `string | null`.
+- `allInnerTexts()`: rendered text from all matching elements.
+- `allTextContents()`: raw DOM text from all matching elements.
+
+For assertions, prefer web-first assertions:
+
+```ts
+await expect(page.locator('.message')).toHaveText('Saved successfully');
+```
+
+This retries automatically and is usually more stable than reading text into a string and asserting once.
+
+### 37. Web Tables and Reusable Helper Functions
+
+The web-table files demonstrate finding a row by employee name and then reading related data from another cell.
+
+`21_commonFunction.ts` contains reusable functions:
+
+- `verifyIfNameIsPresentAndItsRole(page, name)`
+- `verifyIfNameIsPresentAndItsRoleAndCheck(page, name)`
+
+The helper builds XPath locators dynamically:
+
+```ts
+const nameValue = await page.locator(
+  "//tbody[@id='employee-body']/tr[" + i + "]/td[3]//strong"
+).innerText();
+```
+
+Then it finds a related role cell with XPath axes:
+
+```ts
+"//ancestor::td//following-sibling::td[1]"
+```
+
+This teaches useful table concepts:
+
+- Locate all rows.
+- Loop through rows.
+- Read a specific cell from each row.
+- When a match is found, read a related cell from the same row.
+- Click and verify a row checkbox.
+- Move repeated row logic into helper functions.
+
+For production-quality code, prefer clearer locator composition when possible and type the helper parameter as `Page` instead of `any`.
+
 ## Interview Questions
 
 ### Playwright Fundamentals
@@ -1787,3 +1970,108 @@ await expect(changedURL).not.toBe(initialURL);
 #### 137. What are the most important Playwright concepts from these tests?
 
 The key concepts are test runner usage, fixtures, browser-context-page architecture, async/await, navigation options, context options, mobile emulation, role/test id/CSS/XPath/text locators, role name matching, chained locators, checkbox actions, reading text and URLs, generic vs web-first assertions, waits, test grouping, annotations, and multi-context testing.
+
+### Session Storage, Reports, Multiple Elements, and Web Tables
+
+#### 138. What is `storageState` in Playwright?
+
+`storageState` is a saved browser context state. It can include cookies, local storage, and session storage. It is commonly used to save login state and reuse it in tests so every test does not have to perform UI login.
+
+```ts
+await context.storageState({ path: './user-session.json' });
+```
+
+#### 139. How do you use a saved login session in a test?
+
+Use `test.use()` with the storage state file.
+
+```ts
+test.use({
+  storageState: './user-session.json',
+});
+```
+
+The file must exist before Playwright creates the test context.
+
+#### 140. Why is calling an async session setup function without `await` risky?
+
+Because the test can continue before the session file is created or updated. This can cause tests to use an old session file, an incomplete file, or no file at all. Put async setup inside an awaited hook or a setup project.
+
+#### 141. When would you use `beforeAll` for login setup?
+
+Use `beforeAll` when a group of tests in the same file can share setup work, such as generating a storage state file. For larger suites, a dedicated authentication setup project is usually better because dependencies are clearer and the login setup runs once before dependent projects.
+
+#### 142. Why can `.env` variables behave unexpectedly with `USERNAME`?
+
+Some operating systems or shells already define `USERNAME`. By default, `dotenv.config()` does not override existing environment variables. Use `dotenv.config({ override: true })` or choose project-specific names such as `ORANGE_USERNAME`.
+
+#### 143. What is a custom reporter in Playwright?
+
+A custom reporter is a class that implements Playwright's `Reporter` interface. It can listen to test lifecycle events and generate custom output such as logs, dashboards, HTML reports, or integrations with external systems.
+
+#### 144. Which reporter hooks are commonly useful?
+
+Common hooks include `onBegin`, `onTestBegin`, `onStepBegin`, `onStepEnd`, `onTestEnd`, and `onEnd`. These hooks let the reporter track run metadata, test status, step data, errors, durations, and attachments.
+
+#### 145. How do screenshots, videos, and traces reach a custom reporter?
+
+Playwright exposes them as test result attachments when artifact collection is enabled. The reporter can inspect `result.attachments`, copy files from `attachment.path`, and link them in the generated report.
+
+#### 146. What is the difference between Playwright HTML report and Allure report?
+
+The Playwright HTML report is built into Playwright and is simple to use for local debugging. Allure is an external reporting ecosystem that is useful for richer test history, suites, categories, labels, attachments, and CI publishing.
+
+#### 147. What is the difference between `all()`, `allInnerTexts()`, and `allTextContents()`?
+
+`all()` returns an array of locators. `allInnerTexts()` returns rendered visible text from all matching elements. `allTextContents()` returns raw DOM text from all matching elements, including text that may not be visible.
+
+#### 148. When should you use `count()` and `nth()` instead of `all()`?
+
+Use `count()` and `nth()` when the list may change while the test is running or when you want Playwright's locator behavior to stay lazy. `all()` snapshots matching locators at that moment.
+
+#### 149. How do you read an attribute from multiple links?
+
+Get the locators and loop through them.
+
+```ts
+const links = await page.locator('a').all();
+
+for (const link of links) {
+  console.log(await link.getAttribute('href'));
+}
+```
+
+#### 150. How do you validate data in a web table?
+
+Locate the table rows, loop through them, read the target cell, and when the expected row is found, assert related cells or actions in the same row.
+
+```ts
+const rows = await page.locator('tbody tr').count();
+
+for (let i = 0; i < rows; i++) {
+  const row = page.locator('tbody tr').nth(i);
+  await expect(row).toContainText('Kabir Khan');
+}
+```
+
+#### 151. Why are reusable helper functions useful for web tables?
+
+Web-table logic often repeats across tests. A helper function can hide row traversal details and let specs read more clearly, for example `verifyIfNameIsPresentAndItsRole(page, 'Kabir Khan')`.
+
+#### 152. What would you improve in a helper that accepts `page: any`?
+
+Use the Playwright `Page` type.
+
+```ts
+import { Page } from '@playwright/test';
+
+async function verifyEmployee(page: Page, name: string) {
+  // helper logic
+}
+```
+
+This improves autocomplete, type checking, and maintainability.
+
+#### 153. What is the risk of building XPath strings with row indexes?
+
+Index-based XPath can break when the table layout changes, rows are sorted, or columns move. It is useful for learning, but in production I would prefer row locators, filtering by text, accessible roles, or stable test IDs when available.
