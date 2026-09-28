@@ -34,11 +34,11 @@ async function listOutNikonCameraAndTheirPrice(page: Page) {
             let productName = await page.locator(productLocator).innerText();
             let lowerProduct = productName.toLowerCase();
 
-            let priceLocator = flipkartLocators.getPrice(i);
-            let price = await page.locator(priceLocator).innerText({ "timeout": 20000 });
+            //let priceLocator = flipkartLocators.getPrice(i);
+            //let price = await page.locator(priceLocator).innerText({ "timeout": 20000 });
 
             if (lowerProduct.includes("nikon")) {
-                console.log(productName + " -----> " + price);
+                console.log(productName);
             }
 
         }
