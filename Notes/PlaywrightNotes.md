@@ -33,6 +33,13 @@ Source files currently covered:
 - `tests/07_WebTable/26_Flipkart.spec.ts`
 - `tests/07_WebTable/26_FlipkartCommonFile.ts`
 - `tests/07_WebTable/26_FlipkartLocators.ts`
+- `tests/08_dropdowns/27_simpleDropdown.spec.ts`
+- `tests/08_dropdowns/28_customDropdown.spec.ts`
+- `tests/08_dropdowns/29_AdvanceDropdown.spec.ts`
+- `tests/08_dropdowns/30_TASK_qaForm.spec.ts`
+- `tests/09_Frames_iFrames/31_SingleiFrame.spec.ts`
+- `tests/09_Frames_iFrames/32_MultiFrameSet.spec.ts`
+- `tests/09_Frames_iFrames/33_NestediFrames.spec.ts`
 - `utils/CustomReporter.ts`
 
 ## Notes
@@ -1330,6 +1337,175 @@ Caveats of testing real e-commerce sites:
 - `isVisible()` does not wait; it returns the current state immediately. That is fine for a "does Next exist?" check, but assertions should use `expect(...).toBeVisible()`.
 - Live sites may show bot checks, A/B layouts, or different results by region, so these tests are good for practice but flaky for CI.
 
+### 43. Native `<select>` Dropdowns With `selectOption()`
+
+`27_simpleDropdown.spec.ts` handles a real HTML `<select>` element on the-internet.herokuapp.com:
+
+```ts
+await page.selectOption("//select[@id='dropdown']", "Option 2");
+```
+
+Key points:
+
+- `selectOption()` works only on native `<select>` elements. It sets the value directly and fires the `input` and `change` events, so there is no need to click the dropdown first.
+- The option can be picked by value, label, or index:
+
+```ts
+const dropdown = page.locator('#dropdown');
+await dropdown.selectOption('2');                    // by value (or label if no value matches)
+await dropdown.selectOption({ label: 'Option 2' });  // by visible text
+await dropdown.selectOption({ index: 2 });           // by position
+await dropdown.selectOption(['a', 'b']);             // multi-select <select multiple>
+```
+
+- Assert the selection with `toHaveValue()`:
+
+```ts
+await expect(dropdown).toHaveValue('2');
+```
+
+- The locator form `page.locator(...).selectOption()` is preferred over `page.selectOption(selector, ...)`, which is an older selector-based API.
+- `page.pause()` opens the Playwright Inspector and stops execution. It is useful while learning or debugging, but remove it before committing, otherwise CI runs will hang until timeout (in headless mode it is ignored).
+
+### 44. Custom (Non-Native) Dropdowns
+
+`28_customDropdown.spec.ts` handles dropdowns built from `div`, `button`, and `li` elements. `selectOption()` does not work here because there is no `<select>`. The pattern is always **open the trigger, then click the option**:
+
+```ts
+await page.getByTestId("lang-trigger").click();
+await page.getByRole("option", { name: "TypeScript" }).click();
+
+await page.getByRole("button", { name: "Web framework" }).click();
+await page.getByText("Next.js", { exact: true }).first().click();
+
+await page.getByLabel("Experience level").click();
+await page.getByText("Principal (10+ years)").first().click();
+```
+
+Concepts used:
+
+- Different ways to find the trigger: `getByTestId()`, `getByRole("button")`, and `getByLabel()`.
+- Well-built custom dropdowns expose ARIA roles such as `listbox` and `option`, so `getByRole("option", { name })` is the most reliable way to pick an item.
+- `getByText(..., { exact: true })` avoids matching "Next.js" inside longer text.
+- `.first()` resolves a strict mode violation when the same text appears more than once (for example, the selected value shown in the trigger and in the open list). A better long-term fix is to scope the search to the open list: `page.getByRole('listbox').getByText('Next.js')`.
+
+### 45. Advanced Dropdowns: Multi-Select, Creatable, and Searchable
+
+`29_AdvanceDropdown.spec.ts` automates react-select style components:
+
+| Dropdown type | Technique |
+| --- | --- |
+| Single select | Click the input, click the option text |
+| Multi select | Click several options; remove a chip with `getByLabel('Remove Mocha')` |
+| Creatable | `fill()` a new value and press `Enter` to create it |
+| Placeholder trigger | Open with `getByText("Pick a deployment target…")` |
+| Searchable | Type part of the text, assert the match is visible, then click it |
+
+```ts
+// Creatable: type a new value and confirm it with Enter
+await page.getByTestId("rs-creatable-input").fill("Security Testing");
+await page.keyboard.press('Enter');
+
+// Close any open menu
+await page.keyboard.press('Escape');
+
+// Searchable dropdown
+await page.getByRole("textbox", { name: "Search cities" }).fill("Hyder");
+await expect(page.getByText("Hyderabad")).toBeVisible();
+await page.getByText("Hyderabad").click();
+```
+
+Concepts used:
+
+- `page.keyboard.press()` for keys such as `Enter` and `Escape`. `locator.press('Enter')` does the same on a specific element.
+- Remove buttons on chips usually have an `aria-label`, so `getByLabel()` finds them.
+- `Escape` closes an open menu so it does not cover the next control.
+- Note: `expect(await page.getByText(...))` does not need the inner `await`, because building a locator is synchronous. Write `await expect(page.getByText(...)).toBeVisible()`.
+
+### 46. Practice Form: Radios, Checkboxes, Selects, File Upload, and Download
+
+`30_TASK_qaForm.spec.ts` fills a full QA practice form on the Testing Academy site:
+
+```ts
+await page.locator("//input[@id='first-name']").fill("Vineet");
+await page.getByTestId("gender-male").click();
+await page.selectOption("//select[@id='years-experience']", "7");
+await page.getByTestId("tool-selenium").click();
+await page.getByTestId("upload-image").setInputFiles("/Users/vineetverma/Downloads/Play2.png");
+await page.getByTestId("download-file").click();
+await page.getByTestId("profile-submit").click();
+```
+
+Concepts used:
+
+- Radio buttons and checkboxes clicked by test id. `check()` is safer for checkboxes because it is idempotent and verifies the result.
+- Native select handled with `selectOption()`.
+- **File upload** with `setInputFiles()` on an `<input type="file">`. It accepts one path, an array of paths, or an empty array to clear the selection.
+- **File download**: clicking a download link alone does not verify anything. Wait for the download event:
+
+```ts
+const downloadPromise = page.waitForEvent('download');
+await page.getByTestId('download-file').click();
+const download = await downloadPromise;
+await download.saveAs('downloads/' + download.suggestedFilename());
+```
+
+- Date inputs (`type="date"`) expect the value in `YYYY-MM-DD` format with `fill()`, so `"26/11/2026"` fails; use `"2026-11-26"`.
+
+Improvements to keep in mind:
+
+- Use a path inside the project, for example `path.join(__dirname, 'testdata', 'Play2.png')`, instead of an absolute path from one machine, otherwise the test fails on CI or on another laptop.
+- Add assertions at the end (for example, a success message) so the test proves the submit worked.
+
+### 47. Frames and iFrames
+
+An `<iframe>` (or a `<frame>` inside a `<frameset>`) loads a separate document. Locators on `page` do not see inside it, so you first get a `FrameLocator` and then locate elements through it.
+
+#### Single iFrame (`31_SingleiFrame.spec.ts`)
+
+```ts
+const vehicleFrame: FrameLocator = page.frameLocator("//iframe[@id='frame-one']");
+await vehicleFrame.locator("//input[@id='RESULT_TextField-1']").fill("Gypsy");
+```
+
+#### Frameset With Multiple Frames (`32_MultiFrameSet.spec.ts`)
+
+Old-style pages use `<frameset>` with `<frame name="...">`. The same `frameLocator()` works, one per frame:
+
+```ts
+const sideFrame = page.frameLocator("//frame[@name='side']");
+await sideFrame.getByTestId("side-link-registration").click();
+
+const mainFrame = page.frameLocator("//frame[@name='main']");
+console.log(await mainFrame.getByText("You're inside the ").innerText());
+
+const footerFrame = page.frameLocator("//frame[@name='footer']");
+```
+
+#### Nested iFrames (`33_NestediFrames.spec.ts`)
+
+For frames inside frames, chain from the parent frame. This file uses `locator().contentFrame()`, which converts an iframe `Locator` into a `FrameLocator`:
+
+```ts
+// The page has two iframes with id='pact1', so pick the first to avoid a strict mode violation
+const topFrame = page.locator("//iframe[@id='pact1']").first().contentFrame();
+const middleFrame = topFrame.locator("//iframe[@id='pact2']").first().contentFrame();
+const lowerFrame = middleFrame.locator("//iframe[@id='pact3']").first().contentFrame();
+
+await topFrame.locator("//input[@id='inp_val']").first().fill("Selenium");
+await middleFrame.locator("//input[@id='jex']").first().fill("Playwright");
+await lowerFrame.locator("//input[@id='glaf']").first().fill("Company");
+```
+
+Key points:
+
+- `page.frameLocator(selector)` and `page.locator(selector).contentFrame()` both return a `FrameLocator`. `contentFrame()` is useful when you need `first()`, `nth()`, or `filter()` on the iframe element before entering it.
+- `FrameLocator` is lazy and synchronous, like `Locator`, so `await page.frameLocator(...)` is not needed.
+- Strict mode also applies to iframes: if the selector matches two iframes, use `.first()` or a more specific selector.
+- Unlike Selenium, there is no `switchTo().frame()` and no switching back to the default content. The `page` object always refers to the main document, and each `FrameLocator` refers to its own frame.
+- There is also the `Frame` API: `page.frame({ name: 'main' })` or `page.frame({ url: /regex/ })` returns a `Frame` object (or `null`), and `page.frames()` lists all frames. `FrameLocator` is preferred because it auto-waits and re-resolves the frame.
+- `console.log(await locator.click())` prints `undefined`, because `click()` returns nothing. Log text with `innerText()` or `textContent()` instead.
+
 ## Interview Questions
 
 ### Playwright Fundamentals
@@ -2380,3 +2556,144 @@ Call `test.setTimeout(60000)` at file level or inside the test, or use `test.slo
 #### 170. What challenges do you face automating a live e-commerce site like Flipkart?
 
 First-visit popups, dynamic and deeply nested markup, frequent layout changes, A/B tests, lazy loading, bot detection, and region-based results. I would close popups defensively, avoid absolute XPath, wait for results before counting, and keep such tests out of the main CI suite or run them against a controlled environment.
+
+### Dropdowns and Forms
+
+#### 171. How do you select a value from a native `<select>` dropdown?
+
+Use `selectOption()` on the `<select>` locator. No click is needed first:
+
+```ts
+await page.locator('#dropdown').selectOption('Option 2');
+await page.locator('#dropdown').selectOption({ label: 'Option 2' });
+await page.locator('#dropdown').selectOption({ index: 2 });
+```
+
+#### 172. How do you assert the selected value of a dropdown?
+
+Use `toHaveValue()` for the option value, or check the selected option text:
+
+```ts
+await expect(page.locator('#dropdown')).toHaveValue('2');
+await expect(page.locator('#dropdown option:checked')).toHaveText('Option 2');
+```
+
+#### 173. Why does `selectOption()` fail on some dropdowns?
+
+It only works on native `<select>` elements. Many modern UIs build dropdowns from `div`, `button`, and `li` elements (custom or react-select components). For those, click the trigger to open the list and then click the option.
+
+#### 174. How do you automate a custom dropdown reliably?
+
+Open the trigger with a stable locator (role, label, or test id), then pick the option with `getByRole('option', { name })` or scope the text search to the open list, such as `page.getByRole('listbox').getByText('TypeScript')`. Assert the trigger shows the selected value afterwards.
+
+#### 175. How do you handle a multi-select dropdown?
+
+For a native `<select multiple>`, pass an array: `selectOption(['a', 'b'])`. For a custom multi-select, open it and click each option, then close it with `Escape`. Remove a selected chip with its remove button, often found by `getByLabel('Remove Mocha')`.
+
+#### 176. How do you handle a searchable or autocomplete dropdown?
+
+Type part of the text with `fill()` (or `pressSequentially()` if the component needs key events), wait for the suggestion with `expect(...).toBeVisible()`, and click it. Avoid `waitForTimeout()`; wait for the suggestion itself.
+
+#### 177. How do you create a new option in a creatable dropdown?
+
+Fill the input with the new value and press `Enter`:
+
+```ts
+await page.getByTestId('rs-creatable-input').fill('Security Testing');
+await page.keyboard.press('Enter');
+```
+
+#### 178. What is the difference between `page.keyboard.press()` and `locator.press()`?
+
+`page.keyboard.press()` sends the key to whatever element currently has focus. `locator.press()` focuses the given element first and then presses the key, so it is more explicit and less dependent on earlier steps.
+
+#### 179. How do you upload a file in Playwright?
+
+Use `setInputFiles()` on the `<input type="file">`:
+
+```ts
+await page.getByTestId('upload-image').setInputFiles(path.join(__dirname, 'testdata', 'Play2.png'));
+await page.getByTestId('upload-image').setInputFiles([]); // clear
+```
+
+If there is no visible input and a file chooser dialog opens, use `page.waitForEvent('filechooser')` and call `fileChooser.setFiles()`.
+
+#### 180. Why should upload paths not be absolute paths like `/Users/<name>/Downloads/file.png`?
+
+That path only exists on one machine. The test fails on CI and on teammates' laptops. Keep test files in the repository and build the path relative to the test file or project root.
+
+#### 181. How do you verify a file download?
+
+Start waiting for the `download` event before clicking, then check or save the file:
+
+```ts
+const downloadPromise = page.waitForEvent('download');
+await page.getByTestId('download-file').click();
+const download = await downloadPromise;
+expect(download.suggestedFilename()).toContain('.pdf');
+await download.saveAs('downloads/' + download.suggestedFilename());
+```
+
+#### 182. What does `page.pause()` do, and should it be committed?
+
+It pauses execution and opens the Playwright Inspector so you can step through and try locators. It is a debugging aid; remove it before committing. Use `npx playwright test --debug` when you want to debug without changing code.
+
+#### 183. How do you fill a date input?
+
+For `<input type="date">`, use `fill()` with the ISO format `YYYY-MM-DD`, for example `fill('2026-11-26')`. Custom date pickers need to be handled like custom dropdowns: open the picker and click the day.
+
+### Frames and iFrames
+
+#### 184. Why can't a normal page locator find an element inside an iframe?
+
+An iframe loads a separate document with its own DOM. Page locators search only the main document, so you need a `FrameLocator` to search inside the frame.
+
+#### 185. How do you interact with an element inside an iframe?
+
+```ts
+const frame = page.frameLocator('#frame-one');
+await frame.locator('#RESULT_TextField-1').fill('Gypsy');
+```
+
+#### 186. What is the difference between `page.frameLocator()` and `locator.contentFrame()`?
+
+Both return a `FrameLocator`. `page.frameLocator(selector)` takes a selector directly. `locator.contentFrame()` converts an existing iframe `Locator`, so you can use `first()`, `nth()`, or `filter()` to choose the right iframe before entering it.
+
+#### 187. How do you handle nested iframes?
+
+Chain the frame locators from parent to child:
+
+```ts
+const top = page.frameLocator('#pact1');
+const middle = top.frameLocator('#pact2');
+const lower = middle.frameLocator('#pact3');
+await lower.locator('#glaf').fill('Company');
+```
+
+#### 188. How do you handle a `<frameset>` with multiple `<frame>` elements?
+
+Create one `FrameLocator` per frame, usually by the frame's `name`: `page.frameLocator("frame[name='side']")`, `page.frameLocator("frame[name='main']")`, and so on. Each one is independent, so you can act in the side frame and then read from the main frame without switching.
+
+#### 189. What is the difference between `FrameLocator` and `Frame` in Playwright?
+
+`FrameLocator` is lazy, auto-waits for the iframe, and re-resolves it if it reloads; it is the recommended approach. `Frame` is a handle to an existing frame, obtained with `page.frame({ name })`, `page.frame({ url })`, or `page.frames()`. It can be `null` if the frame has not loaded yet, and it is useful for frame-level operations such as reading `frame.url()`.
+
+#### 190. How is Playwright's iframe handling different from Selenium's?
+
+Selenium requires `driver.switchTo().frame(...)` and `switchTo().defaultContent()` to move in and out of frames, and forgetting to switch back is a common bug. Playwright has no switching: `page` always points to the main document and each `FrameLocator` points to its frame, so both can be used side by side.
+
+#### 191. What happens if the iframe selector matches more than one iframe?
+
+A strict mode violation is thrown when you act on an element inside it. Use a more specific selector, or pick one with `page.locator('iframe#pact1').first().contentFrame()`.
+
+#### 192. Do you need `await` before `page.frameLocator()`?
+
+No. Like `page.locator()`, it only builds a lazy reference and returns immediately. `await` is needed on the actions and assertions, such as `fill()`, `click()`, and `expect(...).toBeVisible()`.
+
+#### 193. How do you assert text inside an iframe?
+
+Use a web-first assertion through the frame locator:
+
+```ts
+await expect(page.frameLocator("frame[name='main']").getByText("You're inside the")).toBeVisible();
+```

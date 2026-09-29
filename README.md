@@ -15,7 +15,9 @@ This repository contains beginner-friendly Playwright automation examples writte
 │   ├── 04_SessionStorage/
 │   ├── 05_Reporter/
 │   ├── 06_MultipleElements/
-│   └── 07_WebTable/
+│   ├── 07_WebTable/
+│   ├── 08_dropdowns/
+│   └── 09_Frames_iFrames/
 ├── utils/
 │   └── CustomReporter.ts
 ├── playwright.config.ts
@@ -35,6 +37,9 @@ This repository contains beginner-friendly Playwright automation examples writte
 - Added pagination examples that search table records across pages with `do...while` loops.
 - Added an OrangeHRM add-and-delete employee flow split into locators, Faker test data, and helper files (a step towards Page Object Model).
 - Added a Flipkart search example that lists Nikon cameras across all result pages.
+- Added dropdown examples: native `<select>` with `selectOption()`, custom dropdowns, and react-select style single, multi, creatable, and searchable dropdowns.
+- Added a QA practice-form task covering radios, checkboxes, selects, file upload, and download.
+- Added frame examples: a single iframe, a `<frameset>` with multiple frames, and nested iframes.
 - The notes file has two main sections:
   - **Notes**: Playwright concepts used in the current `.ts` files with explanations and examples.
   - **Interview Questions**: Playwright with JavaScript/TypeScript interview questions and answers.
@@ -81,6 +86,15 @@ The current test files cover:
 - Typed helper return values and dynamic locator functions
 - Confirmation dialogs, toast messages, and cleaning up created records
 - `isVisible()`, `locator.waitFor()`, and `test.setTimeout()`
+- Native dropdowns with `selectOption()`
+- Custom dropdowns with `getByRole("option")`, `getByLabel()`, and `getByText({ exact })`
+- Multi-select, creatable, and searchable dropdowns
+- Keyboard actions with `page.keyboard.press()` (`Enter`, `Escape`)
+- File upload with `setInputFiles()` and download links
+- Debugging with `page.pause()`
+- iFrames with `page.frameLocator()` and `locator.contentFrame()`
+- `<frameset>` pages with multiple named frames
+- Nested iframes and strict-mode handling with `.first()`
 
 ## Test Files
 
@@ -137,6 +151,19 @@ The current test files cover:
 - `tests/07_WebTable/26_Flipkart.spec.ts`
   - `26_FlipkartLocators.ts`: static and index-based locators
   - `26_FlipkartCommonFile.ts`: open site, search, and list products across pages
+
+### Dropdowns
+
+- `tests/08_dropdowns/27_simpleDropdown.spec.ts`: native `<select>` with `selectOption()`
+- `tests/08_dropdowns/28_customDropdown.spec.ts`: custom (div/button based) dropdowns
+- `tests/08_dropdowns/29_AdvanceDropdown.spec.ts`: single, multi, creatable, and searchable dropdowns
+- `tests/08_dropdowns/30_TASK_qaForm.spec.ts`: full practice form with file upload and download
+
+### Frames and iFrames
+
+- `tests/09_Frames_iFrames/31_SingleiFrame.spec.ts`: typing inside a single iframe
+- `tests/09_Frames_iFrames/32_MultiFrameSet.spec.ts`: side, main, and footer frames in a `<frameset>`
+- `tests/09_Frames_iFrames/33_NestediFrames.spec.ts`: three levels of nested iframes
 
 ## Playwright Notes
 
@@ -219,6 +246,15 @@ npx playwright test tests/07_WebTable/26_Flipkart.spec.ts
 ```
 
 This runs against the live Flipkart site, so results and layout can change and the test may be flaky.
+
+Run the dropdown and frame examples:
+
+```bash
+npx playwright test tests/08_dropdowns
+npx playwright test tests/09_Frames_iFrames
+```
+
+Some dropdown files call `page.pause()`, which opens the Playwright Inspector in headed mode; press Resume to continue. `30_TASK_qaForm.spec.ts` uploads a file from a local absolute path, so update that path before running it on another machine.
 
 Run tests from a specific folder:
 
@@ -305,4 +341,6 @@ After running the command, a browser window opens. Perform the actions you want 
 7. Practice list handling from `tests/06_MultipleElements`.
 8. Practice web-table handling, filters, and pagination from `tests/07_WebTable` (files 20–24).
 9. Study the locator/data/helper file split in the OrangeHRM (25) and Flipkart (26) examples.
-10. Revise the **Interview Questions** section before Playwright interviews.
+10. Practice native, custom, and advanced dropdowns from `tests/08_dropdowns`.
+11. Practice single, frameset, and nested frames from `tests/09_Frames_iFrames`.
+12. Revise the **Interview Questions** section before Playwright interviews.
