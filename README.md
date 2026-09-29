@@ -31,6 +31,10 @@ This repository contains beginner-friendly Playwright automation examples writte
 - Added reporting examples for custom reports and Allure reports.
 - Added multiple-element handling examples using `allInnerTexts()`, `all()`, loops, and attributes.
 - Added web-table examples with reusable helper functions.
+- Added `locator.filter()` example for selecting an element by text.
+- Added pagination examples that search table records across pages with `do...while` loops.
+- Added an OrangeHRM add-and-delete employee flow split into locators, Faker test data, and helper files (a step towards Page Object Model).
+- Added a Flipkart search example that lists Nikon cameras across all result pages.
 - The notes file has two main sections:
   - **Notes**: Playwright concepts used in the current `.ts` files with explanations and examples.
   - **Interview Questions**: Playwright with JavaScript/TypeScript interview questions and answers.
@@ -70,6 +74,13 @@ The current test files cover:
 - Handling multiple matching elements with `allInnerTexts()` and `all()`
 - Reading element attributes with `getAttribute()`
 - Web-table row traversal and reusable helper functions
+- Narrowing locators with `filter({ hasText })`
+- Pagination handling with `do...while` loops and Next-button checks
+- Separating locators, test data, and helpers into their own files
+- Dynamic test data with `@faker-js/faker`
+- Typed helper return values and dynamic locator functions
+- Confirmation dialogs, toast messages, and cleaning up created records
+- `isVisible()`, `locator.waitFor()`, and `test.setTimeout()`
 
 ## Test Files
 
@@ -117,6 +128,15 @@ The current test files cover:
 - `tests/07_WebTable/20_WebTable.spec.ts`
 - `tests/07_WebTable/21_commonFunction.ts`
 - `tests/07_WebTable/22_ChecktheRecord.spec.ts`
+- `tests/07_WebTable/23_ClickUsingfilter.spec.ts`
+- `tests/07_WebTable/24_Pagination.spec.ts`
+- `tests/07_WebTable/25_OrangeTable.spec.ts`
+  - `25_Locators.ts`: OrangeHRM locators
+  - `25_DataProvider.ts`: Faker-generated employee data
+  - `25_CommonFile.ts`: login, create employee, find and delete employee helpers
+- `tests/07_WebTable/26_Flipkart.spec.ts`
+  - `26_FlipkartLocators.ts`: static and index-based locators
+  - `26_FlipkartCommonFile.ts`: open site, search, and list products across pages
 
 ## Playwright Notes
 
@@ -185,6 +205,20 @@ npx playwright test tests/05_Reporter/16_TestOrange_AllureReport.spec.ts --worke
 npx allure generate allure-results --clean -o allure-report
 npx allure open allure-report
 ```
+
+Run the OrangeHRM add-and-delete employee flow (needs `USERNAME` and `PASSWORD` in `.env`):
+
+```bash
+npx playwright test tests/07_WebTable/25_OrangeTable.spec.ts --workers=1
+```
+
+Run the Flipkart search example:
+
+```bash
+npx playwright test tests/07_WebTable/26_Flipkart.spec.ts
+```
+
+This runs against the live Flipkart site, so results and layout can change and the test may be flaky.
 
 Run tests from a specific folder:
 
@@ -269,5 +303,6 @@ After running the command, a browser window opens. Perform the actions you want 
 5. Learn session reuse from `tests/04_SessionStorage`.
 6. Review custom and Allure reports from `tests/05_Reporter`.
 7. Practice list handling from `tests/06_MultipleElements`.
-8. Practice web-table handling from `tests/07_WebTable`.
-9. Revise the **Interview Questions** section before Playwright interviews.
+8. Practice web-table handling, filters, and pagination from `tests/07_WebTable` (files 20–24).
+9. Study the locator/data/helper file split in the OrangeHRM (25) and Flipkart (26) examples.
+10. Revise the **Interview Questions** section before Playwright interviews.

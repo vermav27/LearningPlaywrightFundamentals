@@ -24,6 +24,15 @@ Source files currently covered:
 - `tests/07_WebTable/20_WebTable.spec.ts`
 - `tests/07_WebTable/21_commonFunction.ts`
 - `tests/07_WebTable/22_ChecktheRecord.spec.ts`
+- `tests/07_WebTable/23_ClickUsingfilter.spec.ts`
+- `tests/07_WebTable/24_Pagination.spec.ts`
+- `tests/07_WebTable/25_CommonFile.ts`
+- `tests/07_WebTable/25_DataProvider.ts`
+- `tests/07_WebTable/25_Locators.ts`
+- `tests/07_WebTable/25_OrangeTable.spec.ts`
+- `tests/07_WebTable/26_Flipkart.spec.ts`
+- `tests/07_WebTable/26_FlipkartCommonFile.ts`
+- `tests/07_WebTable/26_FlipkartLocators.ts`
 - `utils/CustomReporter.ts`
 
 ## Notes
@@ -1153,6 +1162,174 @@ This teaches useful table concepts:
 
 For production-quality code, prefer clearer locator composition when possible and type the helper parameter as `Page` instead of `any`.
 
+### 38. Narrowing Locators With `filter()`
+
+`23_ClickUsingfilter.spec.ts` picks one link out of a list by its text:
+
+```ts
+await page.locator("//div[@class='list-group']/a").filter({ hasText: "Downloads" }).click();
+expect(page.url()).toContain("downloads");
+```
+
+`filter()` options:
+
+| Option | Filters by | Example |
+| --- | --- | --- |
+| `hasText` | Element contains the text (string or regex) | `filter({ hasText: 'Downloads' })` |
+| `hasNotText` | Element does not contain the text | `filter({ hasNotText: 'Archived' })` |
+| `has` | Element contains a matching child locator | `filter({ has: page.getByRole('button', { name: 'Delete' }) })` |
+| `hasNot` | Element does not contain the child locator | `filter({ hasNot: page.locator('.disabled') })` |
+| `visible` | Only visible elements | `filter({ visible: true })` |
+
+`filter()` is usually more stable than `nth()` because it selects by content instead of position. It is especially useful for table rows:
+
+```ts
+const row = page.locator('tbody tr').filter({ hasText: 'Luca Greco' });
+await expect(row.locator("td[data-col='role']")).toHaveText('Engineer');
+```
+
+Note: `page.url()` is synchronous, so `await` is not needed. A retrying alternative is `await expect(page).toHaveURL(/downloads/)`.
+
+### 39. Pagination With `do...while`
+
+`24_Pagination.spec.ts` searches a paginated table for an employee and clicks **Next** until the record is found:
+
+```ts
+let foundName = false;
+
+do {
+  for (let i = 1; i <= numberOfRows; i++) {
+    const myName = await page.locator(p1_nameLocator + i + p2_nameLocator).innerText();
+    if (myName === "Luca Greco") {
+      foundName = true;
+      break;
+    }
+  }
+
+  if (!foundName) {
+    await nextButton.click();
+  }
+} while (!foundName);
+```
+
+Key ideas:
+
+- `do...while` runs the page scan at least once, then repeats while the condition is true.
+- `break` exits the inner `for` loop as soon as the row is found.
+- Related cells in the same row are read with column-specific XPath such as `td[@data-col='role']` and `td[@data-col='country']`.
+
+Things to watch for in real frameworks:
+
+- Always add an exit condition for the last page (for example, stop when the Next button is disabled or hidden). Otherwise a missing record causes an infinite loop until the test timeout.
+- Re-count rows on every page; the last page often has fewer rows.
+- After clicking Next, wait for the table to update (for example, assert the page number or the first row changed) before reading rows.
+
+### 40. Page-Object-Style Separation: Locators, Test Data, and Helpers
+
+`25_OrangeTable.spec.ts` splits one end-to-end flow into several files:
+
+| File | Responsibility |
+| --- | --- |
+| `25_Locators.ts` | Exports an `orangeHRM` object holding all XPath strings |
+| `25_DataProvider.ts` | Generates random test data with `@faker-js/faker` |
+| `25_CommonFile.ts` | Reusable business actions: login, create employee, find and delete employee |
+| `25_OrangeTable.spec.ts` | The short, readable test that calls the helpers |
+
+The spec reads like a test case:
+
+```ts
+import * as CommonFile from './25_CommonFile.ts';
+
+test("Verify add user and delete user", async ({ page }) => {
+  await CommonFile.LoginOrangeHRM(page);
+  const { FullName, LastName } = await CommonFile.CreatePIMRecordAndVerifyItsCreated(page);
+  await CommonFile.FindRecordAndDeleteTheRecordFromTable(page, FullName, LastName);
+});
+```
+
+Concepts used:
+
+- **Centralized locators**: when the UI changes, only `25_Locators.ts` needs updating.
+- **Typed return values**: `CreatePIMRecordAndVerifyItsCreated()` returns `Promise<employeeName>`, where `type employeeName = { FullName: string, LastName: string }`.
+- **Named exports and namespace imports**: `export { LoginOrangeHRM, ... }` and `import * as CommonFile from ...`.
+- **Credentials from `.env`**: `process.env.USERNAME ?? ""` with `dotenv.config({ override: true })`.
+- **`waitForLoadState("networkidle")`** after login and navigation.
+- **Row-level actions**: once the matching row index `i` is found, the checkbox and trash icon are located inside that same row with template literals:
+
+```ts
+const del = page.locator(`//div[@class='oxd-table-body']/div[${i}]//i[contains(@class,'trash')]`);
+```
+
+- **Confirmation dialog**: assert the dialog is visible, verify the button text is `Yes, Delete`, click it, and assert the success toast.
+- **Test cleanup inside the test**: the record created by the test is also deleted by the test, keeping the shared demo environment clean.
+
+This is a lightweight step towards the Page Object Model. A full POM would wrap these in a class such as `PimPage` with locators as `Locator` properties built from `page`.
+
+### 41. Dynamic Test Data With Faker
+
+`25_DataProvider.ts` uses `@faker-js/faker` to generate unique data for each run:
+
+```ts
+import { faker } from '@faker-js/faker';
+
+export let data = {
+  fake_firstName: faker.person.firstName(),
+  fake_middleName: faker.person.middleName(),
+  fake_lastName: faker.person.lastName(),
+  fake_id: faker.number.int({ min: 1000, max: 9999 }).toString(),
+};
+```
+
+Why use generated data:
+
+- Avoids clashes with records left by earlier runs or other users of a shared environment.
+- Makes the test repeatable without manual data setup.
+
+Keep in mind:
+
+- Values are generated once when the module is imported, so every test in the same worker shares them. Use a function such as `createEmployee()` if each test needs fresh data.
+- Log the generated values (or use `faker.seed(123)`) so failures can be reproduced.
+- Random IDs can still collide; a 4-digit range is small. Prefer larger ranges or timestamps when uniqueness matters.
+
+### 42. Scraping Search Results Across Pages (Flipkart Example)
+
+`26_Flipkart.spec.ts` searches Flipkart for "DSLR Camera" and prints every product whose name contains "nikon", across all result pages.
+
+Structure:
+
+- `26_FlipkartLocators.ts`: static locators plus **locator functions** that take an index:
+
+```ts
+getLabels(x: number) {
+  return `//div[@id='container']/div/div[3]/div/div[2]/div[${x}]/div/div/div/a/div[2]/div[1]/div[1]`;
+},
+```
+
+- `26_FlipkartCommonFile.ts`: `Openflipkart()`, `searchForCamera()`, and `listOutNikonCameraAndTheirPrice()`.
+- `26_Flipkart.spec.ts`: calls the helpers and raises the timeout with `test.setTimeout(60000)`.
+
+Concepts used:
+
+- Closing a login popup on first visit (`crossButton`).
+- `locator.first().waitFor({ state: "visible" })` to wait for results before counting them.
+- Case-insensitive matching with `productName.toLowerCase().includes("nikon")`.
+- Stopping pagination when the Next button is no longer visible:
+
+```ts
+if (!(await page.locator(flipkartLocators.nextButton).isVisible())) {
+  break;
+}
+await page.locator(flipkartLocators.nextButton).click();
+```
+
+- `test.setTimeout()` for long multi-page flows.
+
+Caveats of testing real e-commerce sites:
+
+- Long absolute XPaths such as `div[3]/div/div[2]/div[${x}]` break whenever the layout changes. Prefer anchoring on stable attributes or text.
+- `isVisible()` does not wait; it returns the current state immediately. That is fine for a "does Next exist?" check, but assertions should use `expect(...).toBeVisible()`.
+- Live sites may show bot checks, A/B layouts, or different results by region, so these tests are good for practice but flaky for CI.
+
 ## Interview Questions
 
 ### Playwright Fundamentals
@@ -2075,3 +2252,131 @@ This improves autocomplete, type checking, and maintainability.
 #### 153. What is the risk of building XPath strings with row indexes?
 
 Index-based XPath can break when the table layout changes, rows are sorted, or columns move. It is useful for learning, but in production I would prefer row locators, filtering by text, accessible roles, or stable test IDs when available.
+
+### Filters, Pagination, Test Data, and Framework Structure
+
+#### 154. What does `locator.filter()` do?
+
+It narrows a locator that matches many elements down to the ones that meet a condition. Options are `hasText`, `hasNotText`, `has`, `hasNot`, and `visible`.
+
+```ts
+await page.locator('.list-group a').filter({ hasText: 'Downloads' }).click();
+```
+
+#### 155. What is the difference between `hasText` and `has` in `filter()`?
+
+`hasText` matches elements containing a text or regex. `has` matches elements that contain a child matching another locator, for example a row that contains a Delete button.
+
+```ts
+page.locator('tr').filter({ has: page.getByRole('button', { name: 'Delete' }) });
+```
+
+#### 156. Why is `filter({ hasText })` often better than `nth()`?
+
+It selects by content rather than position, so the test still works if items are reordered or new items are added.
+
+#### 157. How do you find a record in a paginated table?
+
+Scan the rows on the current page; if the record is not found, click Next and repeat. A `do...while` loop fits because the first page must always be scanned.
+
+```ts
+let found = false;
+do {
+  found = (await page.locator('tbody tr').filter({ hasText: 'Luca Greco' }).count()) > 0;
+  if (!found) {
+    await expect(nextButton).toBeEnabled();
+    await nextButton.click();
+  }
+} while (!found);
+```
+
+#### 158. What is the risk in a pagination loop like `while (!foundName)`?
+
+If the record does not exist, the loop never ends and the test only stops at the timeout. Add an exit condition such as "Next is disabled or hidden", or a maximum page count, and fail with a clear message.
+
+#### 159. What must you wait for after clicking Next in a paginated table?
+
+The table content must actually change before reading rows again. Assert something that reflects the new page, such as the page number, a changed first row, or a finished network response, instead of reading immediately.
+
+#### 160. Why separate locators, test data, and helper functions into different files?
+
+- Locators change often; keeping them in one file means one place to update.
+- Test data can be generated or swapped without touching test logic.
+- Helpers hold business actions (login, create employee, delete employee) so specs stay short and readable.
+
+This is the idea behind the Page Object Model.
+
+#### 161. How would you convert `25_Locators.ts` and `25_CommonFile.ts` into a Page Object Model?
+
+Create page classes that receive `page` and expose `Locator` properties and action methods:
+
+```ts
+import { Page, Locator } from '@playwright/test';
+
+export class PimPage {
+  readonly addButton: Locator;
+  constructor(private page: Page) {
+    this.addButton = page.getByRole('button', { name: 'Add' });
+  }
+  async addEmployee(first: string, last: string) {
+    await this.addButton.click();
+    await this.page.getByPlaceholder('First Name').fill(first);
+    await this.page.getByPlaceholder('Last Name').fill(last);
+    await this.page.getByRole('button', { name: 'Save' }).click();
+  }
+}
+```
+
+#### 162. What is Faker and why use it in tests?
+
+`@faker-js/faker` generates realistic random data such as names, emails, and numbers. It avoids duplicate-record failures on shared environments and removes manual data setup.
+
+#### 163. What is a pitfall of exporting Faker values as constants from a module?
+
+The values are generated once at import time, so all tests in that worker reuse the same data. Export a function that returns fresh data instead, and log the values (or set `faker.seed()`) so failures can be reproduced.
+
+#### 164. Why should a test delete the data it creates?
+
+It keeps shared environments clean, prevents later tests from finding stale records, and makes the test independent and repeatable. For more reliability, do cleanup in `afterEach` or via an API so it runs even if an assertion fails.
+
+#### 165. How do you return multiple values from an async helper in TypeScript?
+
+Return an object and type the promise:
+
+```ts
+type EmployeeName = { FullName: string; LastName: string };
+
+async function createEmployee(page: Page): Promise<EmployeeName> {
+  return { FullName: 'Ana Maria', LastName: 'Lopez' };
+}
+
+const { FullName, LastName } = await createEmployee(page);
+```
+
+#### 166. How do you build a locator for the Nth item dynamically?
+
+Use a function that returns the selector for an index, or better, use `nth()` on a base locator:
+
+```ts
+getLabels(x: number) {
+  return `//div[@id='results']/div[${x}]//a`;
+}
+
+const item = page.locator('#results > div').nth(x);
+```
+
+#### 167. What is the difference between `isVisible()` and `expect(locator).toBeVisible()`?
+
+`isVisible()` returns the current state immediately without waiting or retrying. `toBeVisible()` retries until the element is visible or the timeout expires. Use `isVisible()` for branching logic (such as "is there a Next button?") and `toBeVisible()` for assertions.
+
+#### 168. What does `locator.waitFor({ state: 'visible' })` do?
+
+It waits until the element reaches the given state: `attached`, `detached`, `visible`, or `hidden`. It requires a single element, so use `first()` when the locator matches a list.
+
+#### 169. How do you increase the timeout for a single long test?
+
+Call `test.setTimeout(60000)` at file level or inside the test, or use `test.slow()` to triple the default timeout.
+
+#### 170. What challenges do you face automating a live e-commerce site like Flipkart?
+
+First-visit popups, dynamic and deeply nested markup, frequent layout changes, A/B tests, lazy loading, bot detection, and region-based results. I would close popups defensively, avoid absolute XPath, wait for results before counting, and keep such tests out of the main CI suite or run them against a controlled environment.
