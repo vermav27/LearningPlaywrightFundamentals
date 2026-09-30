@@ -9,7 +9,14 @@
 - Prefers the browser window to be maximized — both explicitly in tests after navigation (e.g., after `page.goto`) and via config so every browser opens maximized. Confidence: 0.7
 - Uses GitHub repositories to host and push the project code. Confidence: 0.6
 - Gives terse, targeted instructions referencing specific files/lines when reporting issues to fix. Confidence: 0.7
-- Prefers the agent to make code changes without running the tests/scripts to verify them — the user runs and verifies the tests themselves. Confidence: 0.8
+- Normally makes/applies the code changes and runs and verifies the tests personally, but in recent sessions also repeatedly asks the agent to run specific specs — e.g., to reproduce a reported issue before fixing it, or "run test and give suggestions". Confidence: 0.6
+- Wants to review and approve the approach before the agent implements changes for non-trivial work (e.g., flakiness fixes), rather than the agent proceeding straight to implementation. Confidence: 0.7
+- Wants the agent to actually run the affected spec to reproduce an issue before attempting to fix it. Confidence: 0.7
+- Frequently asks for a code-quality review plus suggestions on individual spec files (e.g., "is my code fine?"). Confidence: 0.7
+- Wants custom HTML test reports to include screenshots, video, and traces. Confidence: 0.6
+- Prefers stable, semantic locators (e.g., around product cards) over index-based deep XPath. Confidence: 0.6
+- Prefers waiting via `domcontentloaded` plus visible-element waits instead of `networkidle` in Playwright. Confidence: 0.6
+- Accepts longer per-spec timeouts (e.g., ~60000ms) when a test scans multiple result pages. Confidence: 0.5
 - Prefers dynamic/derived values over hardcoded literals in test data (e.g., computing today's date at runtime instead of a fixed day). Confidence: 0.5
 - Wants reference documentation stored as a markdown file inside the folder covering that topic (e.g., a locators doc under the corresponding locator-commands test folder). Confidence: 0.5
 - When asking for a reference doc on a feature/API, expects exhaustive coverage of every item in that category — not a curated subset. Confidence: 0.6

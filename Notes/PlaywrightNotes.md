@@ -40,6 +40,7 @@ Source files currently covered:
 - `tests/09_Frames_iFrames/31_SingleiFrame.spec.ts`
 - `tests/09_Frames_iFrames/32_MultiFrameSet.spec.ts`
 - `tests/09_Frames_iFrames/33_NestediFrames.spec.ts`
+- `tests/10_KeyboardEvents/34_KeyboardEvenets.spec.ts`
 - `utils/CustomReporter.ts`
 
 ## Notes
@@ -1506,6 +1507,53 @@ Key points:
 - There is also the `Frame` API: `page.frame({ name: 'main' })` or `page.frame({ url: /regex/ })` returns a `Frame` object (or `null`), and `page.frames()` lists all frames. `FrameLocator` is preferred because it auto-waits and re-resolves the frame.
 - `console.log(await locator.click())` prints `undefined`, because `click()` returns nothing. Log text with `innerText()` or `textContent()` instead.
 
+### 48. Keyboard Events With `page.keyboard`
+
+`34_KeyboardEvenets.spec.ts` fills a whole form using only the keyboard. It clicks the first field once to give it focus, then types into each field and moves to the next one with `Tab`, the same way a keyboard-only user would:
+
+```ts
+await page.getByTestId("firstname").click();   // give focus to the first field
+await page.keyboard.type("Vineet");
+await page.keyboard.press('Tab');               // move focus to the next field
+await page.keyboard.type("Verma");
+await page.keyboard.press('Tab');
+await page.keyboard.type("hello@mail.com");
+// ... phone, username, password
+await page.keyboard.press('Tab');
+await page.keyboard.press('ArrowLeft');         // change the selected option in a radio group
+await page.keyboard.press('Tab');
+await page.keyboard.press('Space');             // toggle a checkbox
+```
+
+Main `page.keyboard` methods:
+
+| Method | What it does |
+| --- | --- |
+| `keyboard.type(text)` | Sends `keydown`, `keypress`/`input`, and `keyup` for every character into the focused element. |
+| `keyboard.press(key)` | Presses and releases one key or a combination, such as `'Tab'`, `'Enter'`, `'ArrowLeft'`, `'Space'`, `'Control+A'`. |
+| `keyboard.down(key)` / `keyboard.up(key)` | Holds and releases a key, for example holding `Shift` while pressing other keys. |
+| `keyboard.insertText(text)` | Inserts text with a single `input` event and no key events. |
+
+Common key names: `Tab`, `Enter`, `Escape`, `Backspace`, `Delete`, `Space`, `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`, `Home`, `End`, `PageUp`, `PageDown`, `F1`–`F12`, `Shift`, `Control`, `Alt`, `Meta`, and `ControlOrMeta` (Control on Windows/Linux, Command on macOS).
+
+Keyboard behaviour inside forms:
+
+- `Tab` moves focus forward, `Shift+Tab` moves it back.
+- In a radio group, the arrow keys move the selection between options (focus and checked state move together).
+- `Space` toggles a focused checkbox or selects a focused radio button; `Enter` submits a form or activates a focused button or link.
+
+Key points:
+
+- `page.keyboard` always acts on whichever element has focus, so the test depends on the tab order of the page. If a field is added or the order changes, the text lands in the wrong field. `locator.press()` and `locator.pressSequentially()` focus a specific element first and are less fragile.
+- `fill()` sets the value in one step and is the normal choice for text inputs. Use `keyboard.type()` or `locator.pressSequentially()` when the page reacts to each key press (autocomplete, input masks, character counters).
+- Key combinations use `+`: `await page.keyboard.press('ControlOrMeta+A')` then `await page.keyboard.press('Backspace')` clears a field.
+- A keyboard-only flow is also a quick accessibility check: it proves the form can be completed without a mouse and the tab order is sensible.
+
+Improvements to keep in mind:
+
+- The test has no assertions. Add checks such as `await expect(page.getByTestId("firstname")).toHaveValue("Vineet")`, `toBeChecked()` for the radio and checkbox, or a success message after submit.
+- Remove `page.pause()` before committing, as it stops the run in the Inspector.
+
 ## Interview Questions
 
 ### Playwright Fundamentals
@@ -2697,3 +2745,73 @@ Use a web-first assertion through the frame locator:
 ```ts
 await expect(page.frameLocator("frame[name='main']").getByText("You're inside the")).toBeVisible();
 ```
+
+### Keyboard Events
+
+#### 194. What is `page.keyboard` in Playwright?
+
+It is the page's virtual keyboard. Methods such as `type()`, `press()`, `down()`, `up()`, and `insertText()` send real keyboard events to the element that currently has focus.
+
+#### 195. What is the difference between `keyboard.type()` and `fill()`?
+
+`fill()` focuses the element and sets its whole value in one step, firing a single `input` event. `keyboard.type()` sends key events for each character into whatever is focused. Use `fill()` for normal inputs; use key-by-key typing when the page reacts to each key, such as autocomplete or input masks.
+
+#### 196. What is the difference between `keyboard.type()` and `locator.pressSequentially()`?
+
+Both type one character at a time. `keyboard.type()` types into the currently focused element, while `locator.pressSequentially()` focuses the given locator first. `pressSequentially()` is more reliable because it does not depend on earlier focus. It also accepts a `delay` option to slow typing down.
+
+#### 197. What is the difference between `keyboard.press()` and `keyboard.type()`?
+
+`press()` handles one key or key combination by name, such as `'Tab'`, `'Enter'`, or `'Control+A'`. `type()` takes a text string and types each character. `type('Enter')` would type the letters E-n-t-e-r, not press the Enter key.
+
+#### 198. How do you press a key combination like Ctrl+A or Shift+Tab?
+
+Join the keys with `+`:
+
+```ts
+await page.keyboard.press('ControlOrMeta+A'); // Ctrl on Windows/Linux, Cmd on macOS
+await page.keyboard.press('Shift+Tab');
+```
+
+For longer sequences, hold a modifier with `keyboard.down('Shift')`, press other keys, then release it with `keyboard.up('Shift')`.
+
+#### 199. Why use `ControlOrMeta` instead of `Control`?
+
+Shortcuts like select-all and copy use Control on Windows and Linux but Command (Meta) on macOS. `ControlOrMeta` picks the right one for the platform, so the same test works on a Mac laptop and a Linux CI runner.
+
+#### 200. How do you fill a form using only the keyboard?
+
+Focus the first field, then type and move with `Tab`:
+
+```ts
+await page.getByTestId('firstname').click();
+await page.keyboard.type('Vineet');
+await page.keyboard.press('Tab');
+await page.keyboard.type('Verma');
+```
+
+Use the arrow keys to change a radio group selection, `Space` to toggle a checkbox, and `Enter` to submit.
+
+#### 201. What is the risk of a test that relies only on `Tab` to move between fields?
+
+It depends on the page's tab order. If a field is added, removed, or reordered, the text goes into the wrong field and the test may fail far from the real cause. For data entry, target fields directly with locators; keep `Tab` flows for tests whose purpose is to check keyboard navigation and accessibility.
+
+#### 202. How do you verify keyboard navigation for accessibility?
+
+Press `Tab` and assert which element has focus with `await expect(locator).toBeFocused()`. Also check that every control can be reached and used without a mouse (`Space` for checkboxes, arrows for radios, `Enter` for buttons) and that focus order matches the visual order.
+
+#### 203. How do you clear a text field with the keyboard?
+
+Focus it, select all, and delete:
+
+```ts
+await page.getByTestId('firstname').click();
+await page.keyboard.press('ControlOrMeta+A');
+await page.keyboard.press('Backspace');
+```
+
+`fill('')` or `clear()` does the same in one call and is simpler when key events do not matter.
+
+#### 204. What assertions would you add after a keyboard-driven form fill?
+
+Check each value and control state: `toHaveValue()` for text inputs, `toBeChecked()` for the selected radio and checkbox, and a success message or URL change after submit. Without assertions the test only proves that key presses did not throw an error.
