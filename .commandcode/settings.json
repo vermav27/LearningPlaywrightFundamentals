@@ -15,7 +15,8 @@
       "Shell(ls -la user-session.json 2>&1; echo \"---procs---\"; ps aux | grep -iE \"13_SessionStorage|__run_session|chromium|headless_shell\" | grep -v grep | head -20)",
       "Shell(rm:*)",
       "Shell(node tests/04_SessionStorage/__run_session.mts)",
-      "Shell(grep -oE \"^[A-Za-z_][A-Za-z0-9_]*\" .env 2>/dev/null; echo \"---\"; env | grep -E \"^(USERNAME|PASSWORD)=\" | sed 's/=.*/=<set>/')"
+      "Shell(grep -oE \"^[A-Za-z_][A-Za-z0-9_]*\" .env 2>/dev/null; echo \"---\"; env | grep -E \"^(USERNAME|PASSWORD)=\" | sed 's/=.*/=<set>/')",
+      "Shell(git commit -F - <<'EOF' Add keyboard events example with docs updates Add a keyboard-only form filling spec that types into every field using page.keyboard.type(), moves between fields with Tab, and selects radio and checkbox options with ArrowLeft and Space. Update README and Playwright notes to cover the new test folder, and refresh the custom report output. Co-authored-by: CommandCodeBot <noreply@commandcode.ai> EOF)"
     ],
     "deny": [],
     "defaultMode": "default"
