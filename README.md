@@ -17,7 +17,8 @@ This repository contains beginner-friendly Playwright automation examples writte
 │   ├── 06_MultipleElements/
 │   ├── 07_WebTable/
 │   ├── 08_dropdowns/
-│   └── 09_Frames_iFrames/
+│   ├── 09_Frames_iFrames/
+│   └── 10_KeyboardEvents/
 ├── utils/
 │   └── CustomReporter.ts
 ├── playwright.config.ts
@@ -40,6 +41,7 @@ This repository contains beginner-friendly Playwright automation examples writte
 - Added dropdown examples: native `<select>` with `selectOption()`, custom dropdowns, and react-select style single, multi, creatable, and searchable dropdowns.
 - Added a QA practice-form task covering radios, checkboxes, selects, file upload, and download.
 - Added frame examples: a single iframe, a `<frameset>` with multiple frames, and nested iframes.
+- Added a keyboard-events example that fills a whole form using only `page.keyboard` (`type()`, `Tab`, arrow keys, and `Space`).
 - The notes file has two main sections:
   - **Notes**: Playwright concepts used in the current `.ts` files with explanations and examples.
   - **Interview Questions**: Playwright with JavaScript/TypeScript interview questions and answers.
@@ -95,6 +97,8 @@ The current test files cover:
 - iFrames with `page.frameLocator()` and `locator.contentFrame()`
 - `<frameset>` pages with multiple named frames
 - Nested iframes and strict-mode handling with `.first()`
+- Keyboard events with `page.keyboard.type()` and `page.keyboard.press()`
+- Keyboard-only form navigation: `Tab` between fields, arrow keys for radio groups, and `Space` for checkboxes
 
 ## Test Files
 
@@ -164,6 +168,10 @@ The current test files cover:
 - `tests/09_Frames_iFrames/31_SingleiFrame.spec.ts`: typing inside a single iframe
 - `tests/09_Frames_iFrames/32_MultiFrameSet.spec.ts`: side, main, and footer frames in a `<frameset>`
 - `tests/09_Frames_iFrames/33_NestediFrames.spec.ts`: three levels of nested iframes
+
+### Keyboard Events
+
+- `tests/10_KeyboardEvents/34_KeyboardEvenets.spec.ts`: fills a form using only keyboard typing, `Tab`, `ArrowLeft`, and `Space`
 
 ## Playwright Notes
 
@@ -252,9 +260,10 @@ Run the dropdown and frame examples:
 ```bash
 npx playwright test tests/08_dropdowns
 npx playwright test tests/09_Frames_iFrames
+npx playwright test tests/10_KeyboardEvents
 ```
 
-Some dropdown files call `page.pause()`, which opens the Playwright Inspector in headed mode; press Resume to continue. `30_TASK_qaForm.spec.ts` uploads a file from a local absolute path, so update that path before running it on another machine.
+Some dropdown files and the keyboard-events file call `page.pause()`, which opens the Playwright Inspector in headed mode; press Resume to continue. `30_TASK_qaForm.spec.ts` uploads a file from a local absolute path, so update that path before running it on another machine.
 
 Run tests from a specific folder:
 
@@ -343,4 +352,5 @@ After running the command, a browser window opens. Perform the actions you want 
 9. Study the locator/data/helper file split in the OrangeHRM (25) and Flipkart (26) examples.
 10. Practice native, custom, and advanced dropdowns from `tests/08_dropdowns`.
 11. Practice single, frameset, and nested frames from `tests/09_Frames_iFrames`.
-12. Revise the **Interview Questions** section before Playwright interviews.
+12. Practice keyboard-only form filling from `tests/10_KeyboardEvents`.
+13. Revise the **Interview Questions** section before Playwright interviews.
