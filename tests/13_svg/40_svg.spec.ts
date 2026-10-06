@@ -1,3 +1,5 @@
+// Playwright way of handling SVG
+
 import { test, expect, Locator } from '@playwright/test';
 
 test.describe("Flipkart Test", () => {

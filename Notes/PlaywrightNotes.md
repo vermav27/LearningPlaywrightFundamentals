@@ -41,6 +41,16 @@ Source files currently covered:
 - `tests/09_Frames_iFrames/32_MultiFrameSet.spec.ts`
 - `tests/09_Frames_iFrames/33_NestediFrames.spec.ts`
 - `tests/10_KeyboardEvents/34_KeyboardEvenets.spec.ts`
+- `tests/11_Hover_Drag_Drop/35_Hover_TestCase.spec.ts`
+- `tests/11_Hover_Drag_Drop/36_Drag_and_Drop.spec.ts`
+- `tests/11_Hover_Drag_Drop/37_Advance_Drag_And_Drop.spec.ts`
+- `tests/11_Hover_Drag_Drop/38_ContextClick.spec.ts`
+- `tests/12_Alerts/39_JS_Alerts.spec.ts`
+- `tests/13_svg/40_svg.spec.ts`
+- `tests/13_svg/41_svg_example.spec.ts`
+- `tests/13_svg/42_Real_svg_concept.spec.ts`
+- `tests/13_svg/43_Task_AppliTools.spec.ts`
+- `tests/13_svg/43_Task_Utility.ts`
 - `utils/CustomReporter.ts`
 
 ## Notes
@@ -1554,6 +1564,224 @@ Improvements to keep in mind:
 - The test has no assertions. Add checks such as `await expect(page.getByTestId("firstname")).toHaveValue("Vineet")`, `toBeChecked()` for the radio and checkbox, or a success message after submit.
 - Remove `page.pause()` before committing, as it stops the run in the Inspector.
 
+### 49. Hover, Drag-and-Drop, and Context Click
+
+The files under `tests/11_Hover_Drag_Drop` cover mouse interactions that go beyond normal left-clicks.
+
+#### Hover Menus
+
+`35_Hover_TestCase.spec.ts` uses `locator.hover()` to open menus that appear only when the mouse moves over a navigation item.
+
+```ts
+await page.locator("//a[text()='Services']").first().hover();
+await page.getByTestId("nav-add-ons").hover();
+await page.getByTestId("test-id-Hotel").click();
+```
+
+Key points:
+
+- `hover()` moves the mouse to the element and waits until the element is actionable.
+- Hover menus are often timing-sensitive, so prefer stable locators such as test ids when available.
+- If text matches multiple elements, use a more specific locator or `.first()` only when you intentionally want the first match.
+
+#### Simple Drag and Drop
+
+`36_Drag_and_Drop.spec.ts` uses the high-level Playwright API:
+
+```ts
+let cola = page.locator("//div[@id='column-a']");
+let colb = page.locator("//div[@id='column-b']");
+await cola.dragTo(colb);
+```
+
+`dragTo()` is the first option to try because it expresses the user intent clearly: drag the source element to the target element.
+
+#### Advanced Drag and Drop With Mouse Coordinates
+
+Some custom drag-and-drop widgets need lower-level mouse control. `37_Advance_Drag_And_Drop.spec.ts` gets each element's screen position with `boundingBox()` and then moves the mouse manually:
+
+```ts
+let sBox = (await source.boundingBox())!;
+let dBox = (await destination.boundingBox())!;
+
+await page.mouse.move(sBox.x + sBox.width / 2, sBox.y + sBox.height / 2);
+await page.mouse.down();
+await page.mouse.move(dBox.x + dBox.width / 2, dBox.y + dBox.height / 2);
+await page.mouse.up();
+```
+
+The center of an element is calculated as:
+
+```ts
+x + width / 2
+y + height / 2
+```
+
+In plain English: start from the top-left position of the element, then move halfway across and halfway down.
+
+Key points:
+
+- `boundingBox()` returns `{ x, y, width, height }` or `null` if the element is not visible.
+- The `!` tells TypeScript that the value is not null, but it does not protect runtime execution. For production framework code, check the value and throw a clear error if it is missing.
+- Manual mouse movement is useful when a library reacts to real pointer movement instead of simple HTML drag events.
+
+#### Context Click
+
+`38_ContextClick.spec.ts` right-clicks an element by passing the mouse button option:
+
+```ts
+await page.getByTestId("ctx-target").click({ button: "right" });
+let allOptions = await page.locator("//ul[@data-testid='ctx-menu']/li//span[1]").allInnerTexts();
+```
+
+Use this pattern for custom context menus. After the right-click, assert the menu is visible or read its options.
+
+### 50. JavaScript Alerts, Confirms, and Prompts
+
+`39_JS_Alerts.spec.ts` handles browser dialogs with the `dialog` event.
+
+```ts
+page.on('dialog', async dialog => {
+  await dialog.accept();
+});
+
+await page.locator("//button[text()='Click for JS Alert']").click();
+```
+
+For a prompt, pass text to `accept()`:
+
+```ts
+page.on('dialog', async dialog => {
+  await dialog.accept("Vineet");
+});
+```
+
+Key points:
+
+- Register `page.on('dialog', ...)` before clicking the button that opens the alert.
+- Use `dialog.accept()` for alert and confirm OK.
+- Use `dialog.dismiss()` for confirm Cancel.
+- Use `dialog.accept("text")` for prompt input.
+- After handling the dialog, assert the page result text so the test proves the dialog action worked.
+
+### 51. SVG Automation
+
+The files under `tests/13_svg` cover SVG elements in real and practice pages.
+
+#### Clicking SVG Elements
+
+`41_svg_example.spec.ts` shows that SVG elements can often be clicked with normal CSS or role locators:
+
+```ts
+await page.locator("#circle-blue").click();
+await page.getByRole("button", { name: /Q3 bar/ }).click();
+```
+
+Use role locators when the SVG element exposes an accessible name. Use CSS ids or classes when the page provides stable SVG attributes.
+
+#### Reading SVG Attributes
+
+SVG charts often store useful data in attributes:
+
+```ts
+const allBars = await page.locator(".bar").all();
+
+for (let bar of allBars) {
+  let barLabel = await bar.getAttribute('data-quarter');
+  let barValue = await bar.getAttribute('data-value');
+  console.log(barLabel + " ===> " + barValue);
+}
+```
+
+Important point: `all()` returns an array immediately. It does not wait for future matching elements to appear. If SVG content is rendered later, wait first:
+
+```ts
+const bars = page.locator(".bar");
+await bars.first().waitFor({ state: "attached" });
+const allBars = await bars.all();
+```
+
+#### SVG XPath With `name()`
+
+SVG tags live in an XML namespace, so XPath like `//path` can be unreliable. `42_Real_svg_concept.spec.ts` uses `name()`:
+
+```ts
+const statePaths = await page.locator("//div[@id='admin1_map_inner']//*[name()='path']").all();
+```
+
+For SVG text labels:
+
+```ts
+const stateLocator = `//div[@id='admin1_map_inner']//*[name()='text' and contains(@class,'${constructedStateLabel}')]//*[name()='tspan']`;
+const State = await page.locator(stateLocator).textContent();
+```
+
+Key points:
+
+- Use `//*[name()='path']`, `//*[name()='text']`, and `//*[name()='tspan']` for namespace-safe SVG XPath.
+- `getAttribute('class')` reads SVG class names such as `sm_state sm_state_INMP`.
+- String parsing can convert a state path class into the matching label class.
+- Prefer explicit waits for dynamic SVG pages before calling `all()`.
+
+#### SVG Search Icon Example
+
+`40_svg.spec.ts` clicks an SVG search icon on Flipkart:
+
+```ts
+const svgElements = page.locator("svg");
+await svgElements.nth(2).click();
+```
+
+This works for learning, but index-based SVG locators are fragile. If the page adds another SVG before the search icon, `nth(2)` may click the wrong element. Prefer a role, label, button locator, or a scoped locator near the search input when available.
+
+### 52. Reusable Utility Functions and Table Calculations
+
+`43_Task_AppliTools.spec.ts` keeps the test readable by moving repeated logic into `43_Task_Utility.ts`.
+
+```ts
+await utility.loginToApplitools(page);
+await utility.verifyTheURL(page);
+let getValues = await utility.calculateSpentEarnedTotal(page);
+await utility.VerifyTheTotalAmount(getValues.totalValue);
+```
+
+The helper file imports the `Page` type and uses it in function parameters:
+
+```ts
+import { expect, Page } from '@playwright/test';
+
+async function loginToApplitools(page: Page) {
+  await page.goto("https://demo.applitools.com/", { waitUntil: "domcontentloaded" });
+}
+```
+
+URL verification uses a web-first assertion:
+
+```ts
+await expect(page).toHaveURL("https://demo.applitools.com/app.html");
+```
+
+This is better than immediately reading `page.url()` because `toHaveURL()` waits until the page reaches the expected URL or times out.
+
+The calculation helper returns a typed object:
+
+```ts
+type calculatedValues = { totalSpent: number, totalEarned: number, totalValue: number };
+
+async function calculateSpentEarnedTotal(page: Page): Promise<calculatedValues> {
+  // calculate totals
+  return { totalSpent: totalSpent, totalEarned: totalEarned, totalValue: TotalValue };
+}
+```
+
+Key points:
+
+- Always `await` async helper functions. Missing `await` can make the test continue before login, navigation, or validation is finished.
+- A helper that reads the page should accept `page: Page`.
+- A helper that calculates data should return a clear typed value instead of relying only on `console.log()`.
+- `expect(page).toHaveURL(...)` is preferred for navigation assertions.
+- For amount parsing, remove currency symbols, spaces, and commas before calling `Number(...)`.
+
 ## Interview Questions
 
 ### Playwright Fundamentals
@@ -2815,3 +3043,180 @@ await page.keyboard.press('Backspace');
 #### 204. What assertions would you add after a keyboard-driven form fill?
 
 Check each value and control state: `toHaveValue()` for text inputs, `toBeChecked()` for the selected radio and checkbox, and a success message or URL change after submit. Without assertions the test only proves that key presses did not throw an error.
+
+### Hover, Drag-and-Drop, Context Click, and Alerts
+
+#### 205. How do you hover over an element in Playwright?
+
+Use `locator.hover()`:
+
+```ts
+await page.getByTestId('nav-add-ons').hover();
+```
+
+It moves the mouse over the element and waits for the element to be actionable. Hover is commonly used for menus that reveal submenus.
+
+#### 206. How do you right-click an element?
+
+Use `click()` with the right mouse button:
+
+```ts
+await page.getByTestId('ctx-target').click({ button: 'right' });
+```
+
+After that, assert the custom context menu or read the displayed options.
+
+#### 207. What is the easiest way to do drag-and-drop in Playwright?
+
+Use `locator.dragTo()`:
+
+```ts
+await source.dragTo(destination);
+```
+
+It is readable and should be the first choice for normal drag-and-drop interactions.
+
+#### 208. When would you use `page.mouse` instead of `dragTo()`?
+
+Use `page.mouse` when a custom widget reacts to low-level pointer movement and `dragTo()` does not trigger the required behavior. In that case, get element coordinates with `boundingBox()`, move to the source center, press down, move to the target center, and release.
+
+#### 209. How do you calculate the center point of an element from `boundingBox()`?
+
+Use:
+
+```ts
+const centerX = box.x + box.width / 2;
+const centerY = box.y + box.height / 2;
+```
+
+`x` and `y` are the top-left position. Adding half the width and half the height moves the mouse to the middle of the element.
+
+#### 210. What does `boundingBox()` return?
+
+It returns the visible element's position and size:
+
+```ts
+{ x, y, width, height }
+```
+
+It can return `null` if the element is not visible, so production code should check it before using the values.
+
+#### 211. How do you handle JavaScript alerts in Playwright?
+
+Register a dialog handler before the action that opens the alert:
+
+```ts
+page.on('dialog', async dialog => {
+  await dialog.accept();
+});
+
+await page.locator('button').click();
+```
+
+#### 212. How do you enter text into a JavaScript prompt?
+
+Pass the prompt text to `dialog.accept()`:
+
+```ts
+page.on('dialog', async dialog => {
+  await dialog.accept('Vineet');
+});
+```
+
+Use `dialog.dismiss()` when you want to cancel a confirm or prompt.
+
+### SVG Automation
+
+#### 213. Can Playwright interact with SVG elements?
+
+Yes. SVG elements can be clicked and asserted like normal DOM elements when they are visible and actionable. You can use CSS locators, role locators, or XPath depending on how the SVG is built.
+
+#### 214. Why do SVG XPath locators often use `name()`?
+
+SVG elements are in an XML namespace. XPath like `//path` may not always match SVG `path` elements reliably. This pattern is namespace-safe:
+
+```ts
+page.locator("//*[name()='path']");
+```
+
+The same idea works for `text`, `tspan`, `circle`, `rect`, and other SVG tags.
+
+#### 215. How do you read data from SVG elements?
+
+Use `getAttribute()` for SVG attributes:
+
+```ts
+const value = await bar.getAttribute('data-value');
+const cssClass = await statePath.getAttribute('class');
+```
+
+SVG charts often store labels, values, state codes, and metadata in attributes.
+
+#### 216. What is the risk of using `locator("svg").nth(2)`?
+
+It is index-based and fragile. If the page adds or removes another SVG before the target, the index changes and the test clicks the wrong element. Prefer a role locator, accessible name, stable id/class, or a locator scoped near a related element.
+
+#### 217. Does `locator.all()` wait for elements to appear?
+
+No. `all()` immediately returns the elements that match at that moment. For dynamic SVG or table content, wait first:
+
+```ts
+const paths = page.locator("//*[name()='path']");
+await paths.first().waitFor({ state: 'attached' });
+const allPaths = await paths.all();
+```
+
+#### 218. How can you map an SVG path to its label?
+
+Read a stable attribute from the path, parse the state code, build the matching label locator, and read the label text:
+
+```ts
+const classState = await path.getAttribute('class');
+const stateCode = classState?.substring(18).trim();
+const labelLocator = `//*[name()='text' and contains(@class,'sm_label sm_label_${stateCode}')]//*[name()='tspan']`;
+const label = await page.locator(labelLocator).textContent();
+```
+
+### Utility Helpers and Table Calculations
+
+#### 219. Why should helper functions receive `page: Page`?
+
+The helper needs the same Playwright page that the test is using. Typing it as `Page` makes the function contract clear and gives TypeScript/editor support for Playwright methods.
+
+#### 220. Why is missing `await` dangerous with Playwright helper functions?
+
+Most Playwright actions return promises. If a helper is called without `await`, the test continues before that helper finishes. This can cause URL checks, locators, or assertions to run before login or navigation is complete.
+
+#### 221. Why is `expect(page).toHaveURL()` better than `expect(page.url()).toBe()` after navigation?
+
+`expect(page).toHaveURL()` is a web-first assertion. It waits for the URL to become the expected value. `page.url()` reads the current URL immediately, which can be too early if navigation is still happening.
+
+#### 222. How do you return calculated values from a helper in TypeScript?
+
+Define a return type and return an object:
+
+```ts
+type calculatedValues = { totalSpent: number, totalEarned: number, totalValue: number };
+
+async function calculateSpentEarnedTotal(page: Page): Promise<calculatedValues> {
+  return { totalSpent, totalEarned, totalValue };
+}
+```
+
+This is cleaner than only printing values because the test can assert against returned data.
+
+#### 223. How do you convert amount text from a table into a number?
+
+Read the text, remove extra characters such as spaces and commas, then call `Number(...)`:
+
+```ts
+const text = await amountLocator.innerText();
+const numberText = text.replace(' ', '').replace(',', '');
+const amount = Number(numberText);
+```
+
+For a larger framework, prefer a reusable parsing helper that handles currency symbols, commas, spaces, and negative values consistently.
+
+#### 224. What is the difference between `console.log()` and assertion in a test?
+
+`console.log()` only prints information. It does not decide whether the test passes or fails. Assertions such as `expect(total).toEqual(1996.22)` validate behavior and fail the test when the result is wrong.
