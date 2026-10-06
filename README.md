@@ -18,7 +18,10 @@ This repository contains beginner-friendly Playwright automation examples writte
 │   ├── 07_WebTable/
 │   ├── 08_dropdowns/
 │   ├── 09_Frames_iFrames/
-│   └── 10_KeyboardEvents/
+│   ├── 10_KeyboardEvents/
+│   ├── 11_Hover_Drag_Drop/
+│   ├── 12_Alerts/
+│   └── 13_svg/
 ├── utils/
 │   └── CustomReporter.ts
 ├── playwright.config.ts
@@ -42,6 +45,10 @@ This repository contains beginner-friendly Playwright automation examples writte
 - Added a QA practice-form task covering radios, checkboxes, selects, file upload, and download.
 - Added frame examples: a single iframe, a `<frameset>` with multiple frames, and nested iframes.
 - Added a keyboard-events example that fills a whole form using only `page.keyboard` (`type()`, `Tab`, arrow keys, and `Space`).
+- Added hover, context-click, and drag-and-drop examples, including both `locator.dragTo()` and low-level `page.mouse` movement.
+- Added JavaScript alert, confirm, and prompt handling with `page.on('dialog')`.
+- Added SVG examples for clicking SVG elements, reading SVG attributes, using SVG XPath with `name()`, and extracting map labels.
+- Added an Applitools demo task with reusable utility functions for login, URL verification, table amount parsing, and total validation.
 - The notes file has two main sections:
   - **Notes**: Playwright concepts used in the current `.ts` files with explanations and examples.
   - **Interview Questions**: Playwright with JavaScript/TypeScript interview questions and answers.
@@ -99,6 +106,14 @@ The current test files cover:
 - Nested iframes and strict-mode handling with `.first()`
 - Keyboard events with `page.keyboard.type()` and `page.keyboard.press()`
 - Keyboard-only form navigation: `Tab` between fields, arrow keys for radio groups, and `Space` for checkboxes
+- Hover actions with `locator.hover()`
+- Right-click/context menu actions with `click({ button: "right" })`
+- Drag and drop using `locator.dragTo()` and manual mouse actions with `page.mouse.move()`, `mouse.down()`, and `mouse.up()`
+- JavaScript dialogs with `page.on("dialog")`, `dialog.accept()`, and prompt input
+- SVG element automation with CSS, role locators, XPath `name()`, `getAttribute()`, and namespace-safe SVG locators
+- Reusable utility functions with typed `Page` parameters and typed return values
+- URL verification with `await expect(page).toHaveURL(...)`
+- Parsing table values into numbers and validating calculated totals
 
 ## Test Files
 
@@ -172,6 +187,25 @@ The current test files cover:
 ### Keyboard Events
 
 - `tests/10_KeyboardEvents/34_KeyboardEvenets.spec.ts`: fills a form using only keyboard typing, `Tab`, `ArrowLeft`, and `Space`
+
+### Hover, Drag, Drop, and Context Click
+
+- `tests/11_Hover_Drag_Drop/35_Hover_TestCase.spec.ts`: hover menu examples using XPath and test id locators
+- `tests/11_Hover_Drag_Drop/36_Drag_and_Drop.spec.ts`: simple drag-and-drop using `locator.dragTo()`
+- `tests/11_Hover_Drag_Drop/37_Advance_Drag_And_Drop.spec.ts`: advanced drag-and-drop using bounding boxes and manual mouse actions
+- `tests/11_Hover_Drag_Drop/38_ContextClick.spec.ts`: right-click/context-menu handling and reading menu options
+
+### JavaScript Alerts
+
+- `tests/12_Alerts/39_JS_Alerts.spec.ts`: alert, confirm, and prompt handling with `page.on("dialog")`
+
+### SVG
+
+- `tests/13_svg/40_svg.spec.ts`: Flipkart search icon SVG click and product/price listing
+- `tests/13_svg/41_svg_example.spec.ts`: SVG shape clicks, SVG bar clicks, radio selection, and SVG attribute reading
+- `tests/13_svg/42_Real_svg_concept.spec.ts`: real SVG map handling with `path`, `text`, `tspan`, class parsing, and dynamic SVG XPath
+- `tests/13_svg/43_Task_AppliTools.spec.ts`: Applitools demo table-total validation using utility helpers
+- `tests/13_svg/43_Task_Utility.ts`: reusable functions for login, URL assertion, table amount calculation, and final total assertion
 
 ## Playwright Notes
 
@@ -255,15 +289,24 @@ npx playwright test tests/07_WebTable/26_Flipkart.spec.ts
 
 This runs against the live Flipkart site, so results and layout can change and the test may be flaky.
 
-Run the dropdown and frame examples:
+Run the dropdown, frame, keyboard, mouse, alert, and SVG examples:
 
 ```bash
 npx playwright test tests/08_dropdowns
 npx playwright test tests/09_Frames_iFrames
 npx playwright test tests/10_KeyboardEvents
+npx playwright test tests/11_Hover_Drag_Drop
+npx playwright test tests/12_Alerts
+npx playwright test tests/13_svg
 ```
 
-Some dropdown files and the keyboard-events file call `page.pause()`, which opens the Playwright Inspector in headed mode; press Resume to continue. `30_TASK_qaForm.spec.ts` uploads a file from a local absolute path, so update that path before running it on another machine.
+Some dropdown, keyboard-events, hover, and drag-and-drop files call `page.pause()`, which opens the Playwright Inspector in headed mode; press Resume to continue. `30_TASK_qaForm.spec.ts` uploads a file from a local absolute path, so update that path before running it on another machine.
+
+Run only the Applitools utility-task example:
+
+```bash
+npx playwright test tests/13_svg/43_Task_AppliTools.spec.ts
+```
 
 Run tests from a specific folder:
 
@@ -300,6 +343,7 @@ The project uses [playwright.config.ts](playwright.config.ts) with these key set
 - Reporters: `line`, `allure-playwright`, and `./utils/CustomReporter.ts`
 - Trace: `on-first-retry`
 - Browser project: Chromium with `Desktop Chrome`
+- Viewport: `1920 x 1080`
 - Current config runs with `headless: false`
 
 ## Reports and Artifacts
@@ -353,4 +397,7 @@ After running the command, a browser window opens. Perform the actions you want 
 10. Practice native, custom, and advanced dropdowns from `tests/08_dropdowns`.
 11. Practice single, frameset, and nested frames from `tests/09_Frames_iFrames`.
 12. Practice keyboard-only form filling from `tests/10_KeyboardEvents`.
-13. Revise the **Interview Questions** section before Playwright interviews.
+13. Practice hover, context-click, and drag-and-drop from `tests/11_Hover_Drag_Drop`.
+14. Practice JavaScript alert, confirm, and prompt handling from `tests/12_Alerts`.
+15. Practice SVG locators and reusable helper utilities from `tests/13_svg`.
+16. Revise the **Interview Questions** section before Playwright interviews.
