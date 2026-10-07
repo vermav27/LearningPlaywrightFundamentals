@@ -1,0 +1,479 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: 15_FileUpload_Download/46_FileUploaddownload.spec.ts >> Testing upload
+- Location: tests/15_FileUpload_Download/46_FileUploaddownload.spec.ts:4:5
+
+# Error details
+
+```
+Error: ENOENT: no such file or directory, stat '/Users/vineetverma/Desktop/Projects/LearningPlaywrightFundamentals/tests/15_FileUpload_Download/dummy.txt'
+```
+
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - 'region "Announcement: Playwright Automation Mastery new batch" [ref=e2]':
+    - generic [ref=e3]: LIVE
+    - generic [ref=e5]: Playwright Automation Mastery
+    - generic [ref=e6]: New batch
+    - generic [ref=e7]: "|"
+    - generic [ref=e8]: Starts 28 Sept · Mon, Wed, Fri · 7 AM IST
+    - generic [ref=e9]: "|"
+    - emphasis [ref=e11]: UP TO 10% OFF
+    - generic [ref=e12]:
+      - text: Code
+      - code [ref=e13]: PROMODE
+    - link "Enroll" [ref=e14] [cursor=pointer]:
+      - /url: https://class.thetestingacademy.com/playwright-automation-mastery-course
+    - link "Chat on WhatsApp" [ref=e15] [cursor=pointer]:
+      - /url: https://sdet.live/WhatsApp
+      - text: ☎
+    - button "Dismiss banner" [ref=e16] [cursor=pointer]: ×
+  - generic [ref=e17]:
+    - complementary "Practice navigation" [ref=e18]:
+      - generic [ref=e19]:
+        - link "T The Testing Academy" [ref=e20] [cursor=pointer]:
+          - /url: ../index.html
+          - generic [ref=e21]: T
+          - strong [ref=e23]: The Testing Academy
+        - button "Toggle sidebar" [ref=e24] [cursor=pointer]
+      - generic [ref=e28]:
+        - searchbox / [ref=e32]
+        - generic [ref=e33]: /
+      - navigation [ref=e34]:
+        - generic [ref=e35]:
+          - button "JavaScript" [expanded] [ref=e36] [cursor=pointer]
+          - list [ref=e43]:
+            - listitem [ref=e44]:
+              - link "Overview" [ref=e45] [cursor=pointer]:
+                - /url: ../learn/javascript/index.html
+            - listitem [ref=e51]:
+              - link "Foundations (ch 1-4)" [ref=e52] [cursor=pointer]:
+                - /url: ../learn/javascript/foundations.html
+            - listitem [ref=e55]:
+              - generic [ref=e56]:
+                - generic [ref=e58]: Control flow (ch 5-7)
+                - generic [ref=e59]: soon
+            - listitem [ref=e60]:
+              - generic [ref=e61]:
+                - generic [ref=e63]: Data structures (ch 8-12)
+                - generic [ref=e64]: soon
+            - listitem [ref=e65]:
+              - generic [ref=e66]:
+                - generic [ref=e68]: Functions (ch 9 + 13)
+                - generic [ref=e69]: soon
+            - listitem [ref=e70]:
+              - generic [ref=e71]:
+                - generic [ref=e73]: Async (ch 14-15)
+                - generic [ref=e74]: soon
+            - listitem [ref=e75]:
+              - generic [ref=e76]:
+                - generic [ref=e78]: OOP (ch 16-17)
+                - generic [ref=e79]: soon
+            - listitem [ref=e80]:
+              - link "JS notes" [ref=e81] [cursor=pointer]:
+                - /url: ../notes.html
+        - generic [ref=e88]:
+          - button "TypeScript" [expanded] [ref=e89] [cursor=pointer]
+          - list [ref=e96]:
+            - listitem [ref=e97]:
+              - link "Overview" [ref=e98] [cursor=pointer]:
+                - /url: ../learn/typescript/index.html
+            - listitem [ref=e104]:
+              - link "Setup + basics soon" [ref=e105] [cursor=pointer]:
+                - /url: ../learn/typescript/setup.html
+                - generic [ref=e107]: Setup + basics
+                - generic [ref=e108]: soon
+            - listitem [ref=e109]:
+              - link "Types deep dive soon" [ref=e110] [cursor=pointer]:
+                - /url: ../learn/typescript/types.html
+                - generic [ref=e112]: Types deep dive
+                - generic [ref=e113]: soon
+            - listitem [ref=e114]:
+              - link "Interfaces soon" [ref=e115] [cursor=pointer]:
+                - /url: ../learn/typescript/interfaces.html
+                - generic [ref=e117]: Interfaces
+                - generic [ref=e118]: soon
+            - listitem [ref=e119]:
+              - link "Enums soon" [ref=e120] [cursor=pointer]:
+                - /url: ../learn/typescript/enums.html
+                - generic [ref=e122]: Enums
+                - generic [ref=e123]: soon
+            - listitem [ref=e124]:
+              - link "Generics soon" [ref=e125] [cursor=pointer]:
+                - /url: ../learn/typescript/generics.html
+                - generic [ref=e127]: Generics
+                - generic [ref=e128]: soon
+            - listitem [ref=e129]:
+              - link "Access modifiers + classes soon" [ref=e130] [cursor=pointer]:
+                - /url: ../learn/typescript/classes.html
+                - generic [ref=e132]: Access modifiers + classes
+                - generic [ref=e133]: soon
+        - generic [ref=e134]:
+          - button "Playwright fundamentals" [expanded] [ref=e135] [cursor=pointer]
+          - list [ref=e142]:
+            - listitem [ref=e143]:
+              - link "Overview" [ref=e144] [cursor=pointer]:
+                - /url: ../learn/playwright-fundamentals/overview.html
+            - listitem [ref=e150]:
+              - link "Architecture deep dive" [ref=e151] [cursor=pointer]:
+                - /url: ../playwright-e2e-architecture-blueprint.html
+            - listitem [ref=e154]:
+              - link "LangChain agent guide" [ref=e155] [cursor=pointer]:
+                - /url: ../playwright-agent-with-langchain.html
+            - listitem [ref=e158]:
+              - link "Playwright MCP tutorial" [ref=e159] [cursor=pointer]:
+                - /url: ../playwright-mcp.html
+            - listitem [ref=e162]:
+              - link "AI agents guide" [ref=e163] [cursor=pointer]:
+                - /url: ../playwright-ai-agents.html
+            - listitem [ref=e166]:
+              - link "Curriculum hub" [ref=e167] [cursor=pointer]:
+                - /url: ../learn/playwright-fundamentals/index.html
+            - listitem [ref=e170]:
+              - link "Multiple Element Filter" [ref=e171] [cursor=pointer]:
+                - /url: ../multiple_element_filter.html
+            - listitem [ref=e177]:
+              - link "Web Table Directory" [ref=e178] [cursor=pointer]:
+                - /url: ../webtable.html
+            - listitem [ref=e186]:
+              - link "QA Profile Form" [ref=e187] [cursor=pointer]:
+                - /url: ../tables/practice.html
+            - listitem [ref=e193]:
+              - link "Companies Table" [ref=e194] [cursor=pointer]:
+                - /url: ../tables/webtable.html
+            - listitem [ref=e200]:
+              - link "Tall Buildings Table" [ref=e201] [cursor=pointer]:
+                - /url: ../tables/webtable1.html
+            - listitem [ref=e206]:
+              - link "Custom Dropdowns" [ref=e207] [cursor=pointer]:
+                - /url: ../tables/dropdowns.html
+            - listitem [ref=e213]:
+              - link "Select Box Variants" [ref=e214] [cursor=pointer]:
+                - /url: ../tables/select-boxes.html
+            - listitem [ref=e220]:
+              - link "Sortable Admin Table" [ref=e221] [cursor=pointer]:
+                - /url: ../tables/sortable.html
+            - listitem [ref=e228]:
+              - link "Cricket Scorecard" [ref=e229] [cursor=pointer]:
+                - /url: ../tables/scorecard.html
+            - listitem [ref=e235]:
+              - link "Frames overview" [ref=e236] [cursor=pointer]:
+                - /url: ../frames/index.html
+            - listitem [ref=e241]:
+              - link "Multi-frame frameset" [ref=e242] [cursor=pointer]:
+                - /url: ../frames/multi-frames.html
+            - listitem [ref=e250]:
+              - link "Nested iframes" [ref=e251] [cursor=pointer]:
+                - /url: ../frames/nested-iframes.html
+            - listitem [ref=e258]:
+              - link "Courses frameset" [ref=e259] [cursor=pointer]:
+                - /url: ../frames/courses-frameset.html
+            - listitem [ref=e264]:
+              - link "SVG locators" [ref=e265] [cursor=pointer]:
+                - /url: ../widgets/svg.html
+            - listitem [ref=e272]:
+              - link "Shadow DOM" [ref=e273] [cursor=pointer]:
+                - /url: ../widgets/shadow-dom.html
+            - listitem [ref=e278]:
+              - link "Calendar / date picker" [ref=e279] [cursor=pointer]:
+                - /url: ../widgets/calendar.html
+            - listitem [ref=e284]:
+              - link "Drag and drop" [ref=e285] [cursor=pointer]:
+                - /url: ../widgets/dnd.html
+            - listitem [ref=e288]:
+              - link "Toasts and notifications" [ref=e289] [cursor=pointer]:
+                - /url: ../widgets/toasts.html
+            - listitem [ref=e292]:
+              - link "Native dialogs" [ref=e293] [cursor=pointer]:
+                - /url: ../widgets/dialogs.html
+            - listitem [ref=e298]:
+              - link "Hover menus" [ref=e299] [cursor=pointer]:
+                - /url: ../widgets/hover-menu.html
+            - listitem [ref=e304]:
+              - link "Right-click menu" [ref=e305] [cursor=pointer]:
+                - /url: ../widgets/context-menu.html
+            - listitem [ref=e310]:
+              - link "Keyboard navigation" [ref=e311] [cursor=pointer]:
+                - /url: ../widgets/keyboard-form.html
+            - listitem [ref=e317]:
+              - link "Windows and Tabs" [ref=e318] [cursor=pointer]:
+                - /url: ../widgets/windows-tabs.html
+            - listitem [ref=e321]:
+              - link "Upload and Download" [ref=e322] [cursor=pointer]:
+                - /url: ../widgets/upload-download.html
+            - listitem [ref=e325]:
+              - link "Scroll" [ref=e326] [cursor=pointer]:
+                - /url: ../widgets/scroll.html
+            - listitem [ref=e332]:
+              - link "Assertions (expect)" [ref=e333] [cursor=pointer]:
+                - /url: ../widgets/expect.html
+            - listitem [ref=e338]:
+              - link "Test modifiers, hooks, data" [ref=e339] [cursor=pointer]:
+                - /url: ../widgets/test-modifiers.html
+            - listitem [ref=e342]:
+              - link "Data-driven + POM" [ref=e343] [cursor=pointer]:
+                - /url: ../widgets/data-driven.html
+            - listitem [ref=e350]:
+              - link "Network interception" [ref=e351] [cursor=pointer]:
+                - /url: ../network/intercept.html
+            - listitem [ref=e356]:
+              - link "TTACart demo" [ref=e357] [cursor=pointer]:
+                - /url: ../ttacart/index.html
+            - listitem [ref=e364]:
+              - link "TTAStays booking" [ref=e365] [cursor=pointer]:
+                - /url: ../booking/index.html
+            - listitem [ref=e371]:
+              - link "Advance Playwright framework" [ref=e372] [cursor=pointer]:
+                - /url: ../advance-framework.html
+        - generic [ref=e378]:
+          - button "Playwright API Testing" [expanded] [ref=e379] [cursor=pointer]
+          - list [ref=e386]:
+            - listitem [ref=e387]:
+              - link "Overview" [ref=e388] [cursor=pointer]:
+                - /url: ../learn/playwright-api/index.html
+            - listitem [ref=e394]:
+              - link "CRUD basics" [ref=e395] [cursor=pointer]:
+                - /url: ../learn/playwright-api/crud.html
+            - listitem [ref=e398]:
+              - link "Auth + Schema" [ref=e399] [cursor=pointer]:
+                - /url: ../learn/playwright-api/auth-schema.html
+            - listitem [ref=e402]:
+              - link "Network monitoring" [ref=e403] [cursor=pointer]:
+                - /url: ../learn/playwright-api/network.html
+        - generic [ref=e406]:
+          - button "Playwright BDD (Cucumber)" [expanded] [ref=e407] [cursor=pointer]
+          - list [ref=e415]:
+            - listitem [ref=e416]:
+              - link "Overview" [ref=e417] [cursor=pointer]:
+                - /url: ../learn/playwright-cucumber/index.html
+            - listitem [ref=e423]:
+              - link "Setup + first run" [ref=e424] [cursor=pointer]:
+                - /url: ../learn/playwright-cucumber/setup.html
+            - listitem [ref=e427]:
+              - link "Data-driven" [ref=e428] [cursor=pointer]:
+                - /url: ../learn/playwright-cucumber/data-driven.html
+            - listitem [ref=e431]:
+              - link "CI + tags + env" [ref=e432] [cursor=pointer]:
+                - /url: ../learn/playwright-cucumber/ci-tags-env.html
+        - generic [ref=e435]:
+          - button "Playwright DevOps" [expanded] [ref=e436] [cursor=pointer]
+          - list [ref=e445]:
+            - listitem [ref=e446]:
+              - link "NPM Registry (JFrog/Nexus)" [ref=e447] [cursor=pointer]:
+                - /url: ../learn/playwright-registry/index.html
+            - listitem [ref=e450]:
+              - link "Docker setup" [ref=e451] [cursor=pointer]:
+                - /url: ../learn/playwright-docker/index.html
+            - listitem [ref=e454]:
+              - link "Sharding multi-container" [ref=e455] [cursor=pointer]:
+                - /url: ../learn/playwright-shard/index.html
+        - generic [ref=e458]:
+          - button "Playwright AI" [expanded] [ref=e459] [cursor=pointer]
+          - list [ref=e467]:
+            - listitem [ref=e468]:
+              - link "Curriculum hub" [ref=e469] [cursor=pointer]:
+                - /url: ../learn/playwright-ai-agents/index.html
+            - listitem [ref=e472]:
+              - link "Framework + AI (V2)" [ref=e473] [cursor=pointer]:
+                - /url: ../advance-framework-ai.html
+            - listitem [ref=e476]:
+              - link "TTACart + AI live demo" [ref=e477] [cursor=pointer]:
+                - /url: ../ttacart-ai/index.html
+            - listitem [ref=e480]:
+              - link "TTA AI Chat sandbox" [ref=e481] [cursor=pointer]:
+                - /url: ../ai-chat/index.html
+        - generic [ref=e484]:
+          - button "Playwright MCP" [expanded] [ref=e485] [cursor=pointer]
+          - list [ref=e494]:
+            - listitem [ref=e495]:
+              - link "Curriculum hub" [ref=e496] [cursor=pointer]:
+                - /url: ../learn/playwright-mcp/index.html
+        - generic [ref=e499]:
+          - button "Playwright CLI" [expanded] [ref=e500] [cursor=pointer]
+          - list [ref=e507]:
+            - listitem [ref=e508]:
+              - link "Curriculum hub" [ref=e509] [cursor=pointer]:
+                - /url: ../learn/playwright-cli/index.html
+            - listitem [ref=e512]:
+              - link "SnapLocator (Chrome ext)" [ref=e513] [cursor=pointer]:
+                - /url: ../snaplocator.html
+      - generic [ref=e519]:
+        - generic [ref=e520]: © The Testing Academy · 2026
+        - button "Toggle dark mode" [ref=e521] [cursor=pointer]
+    - generic [ref=e524]:
+      - banner [ref=e525]:
+        - button "Open sidebar" [ref=e526] [cursor=pointer]
+        - generic [ref=e529]:
+          - link "Practice" [ref=e530] [cursor=pointer]:
+            - /url: ../index.html
+          - generic [ref=e533]: Widgets
+          - strong [ref=e536]: Upload & Download
+        - generic [ref=e537]:
+          - generic [ref=e538] [cursor=pointer]:
+            - checkbox "Locator markers" [checked] [ref=e539]
+            - generic [ref=e540]: Locator markers
+          - generic [ref=e541]: setInputFiles · download
+          - button "Toggle dark mode" [ref=e542] [cursor=pointer]
+      - main [ref=e548]:
+        - region [ref=e549]:
+          - generic [ref=e550]: Widget practice · Files
+          - heading [level=1] [ref=e552]:
+            - text: Upload
+            - emphasis [ref=e553]: "&"
+            - text: Download
+          - paragraph [ref=e554]:
+            - text: Playwright drives the standard HTML file input via
+            - code [ref=e555]: locator.setInputFiles(...)
+            - text: — no OS dialog is opened. Downloads are caught with
+            - code [ref=e556]: page.waitForEvent('download')
+            - text: +
+            - code [ref=e557]: download.saveAs()
+            - text: . Native OS upload dialogs from custom widgets are out of scope; this page sticks to the standard, supported flow.
+        - generic [ref=e558]:
+          - generic [ref=e559]:
+            - article [ref=e560]:
+              - heading "① Single file upload" [level=2] [ref=e561]
+              - paragraph [ref=e562]:
+                - text: Standard
+                - code [ref=e563]: <input type="file">
+                - text: . Playwright sets the file directly on the input.
+              - generic [ref=e564] [cursor=pointer]:
+                - button "Pick one file" [ref=e565]
+                - generic [ref=e566]: Pick one file
+              - generic [ref=e567]:
+                - generic [ref=e568]:
+                  - generic [ref=e569]: id
+                  - text: =single-upload
+                - generic [ref=e570]:
+                  - generic [ref=e571]: data-testid
+                  - text: =single-upload · single-preview
+                - generic [ref=e572]:
+                  - generic [ref=e573]: type
+                  - text: =file (single)
+            - article [ref=e574]:
+              - heading "② Multiple file upload" [level=2] [ref=e575]
+              - paragraph [ref=e576]:
+                - code [ref=e577]: multiple
+                - text: attribute lets you select several. Playwright passes an array to
+                - code [ref=e578]: setInputFiles
+                - text: .
+              - generic [ref=e579] [cursor=pointer]:
+                - button "Pick one or more files" [ref=e580]
+                - generic [ref=e581]: Pick one or more files
+              - generic [ref=e582]:
+                - generic [ref=e583]:
+                  - generic [ref=e584]: id
+                  - text: =multi-upload
+                - generic [ref=e585]:
+                  - generic [ref=e586]: attr
+                  - text: =multiple
+            - article [ref=e587]:
+              - heading [level=2] [ref=e588]:
+                - text: ③ Drag-drop zone (still uses
+                - code [ref=e589]: setInputFiles
+                - text: )
+              - paragraph [ref=e590]: The visual is a div, but the hidden input behind it is what Playwright targets. Users see a drop zone; tests target the input.
+              - generic [ref=e592]:
+                - strong [ref=e593]: Drop files here
+                - generic [ref=e594]:
+                  - text: or use the hidden input
+                  - code [ref=e595]: "#dropzone-input"
+                  - text: for tests.
+              - generic [ref=e596]:
+                - generic [ref=e597]:
+                  - generic [ref=e598]: id
+                  - text: =dropzone-input (hidden) · dropzone (visual)
+                - generic [ref=e599]:
+                  - generic [ref=e600]: data-testid
+                  - text: =dropzone-input
+            - article [ref=e601]:
+              - heading "④ Downloads" [level=2] [ref=e602]
+              - paragraph [ref=e603]:
+                - text: Anchor with
+                - code [ref=e604]: download
+                - text: attribute serves a generated Blob. Capture via
+                - code [ref=e605]: page.waitForEvent('download')
+                - text: .
+              - generic [ref=e606]:
+                - button "Download text file" [ref=e607] [cursor=pointer]
+                - button "Download JSON" [ref=e608] [cursor=pointer]
+                - link "Download static file" [ref=e609] [cursor=pointer]:
+                  - /url: /playwright/sample-download.txt
+              - generic [ref=e610]:
+                - generic [ref=e611]:
+                  - generic [ref=e612]: data-testid
+                  - text: =download-text · download-json · download-static
+                - generic [ref=e613]:
+                  - generic [ref=e614]: API
+                  - text: =page.waitForEvent('download') · download.saveAs(path)
+            - generic [ref=e615]: No file action yet.
+          - complementary [ref=e616]:
+            - generic [ref=e617]:
+              - heading "What students should practise" [level=3] [ref=e618]
+              - list [ref=e619]:
+                - listitem [ref=e620]:
+                  - text: Upload one file via
+                  - code [ref=e621]: setInputFiles('tests/fixtures/hello.txt')
+                  - text: ; assert preview text contains
+                  - code [ref=e622]: hello.txt
+                  - text: .
+                - listitem [ref=e623]: Upload multiple via array; assert preview count.
+                - listitem [ref=e624]:
+                  - text: Use the dropzone's hidden input —
+                  - code [ref=e625]: setInputFiles
+                  - text: still works on
+                  - code [ref=e626]: hidden
+                  - text: /
+                  - code [ref=e627]: display:none
+                  - text: inputs.
+                - listitem [ref=e628]:
+                  - text: Capture a download with
+                  - code [ref=e629]: Promise.all([page.waitForEvent('download'), click()])
+                  - text: .
+                - listitem [ref=e630]:
+                  - text: Assert
+                  - code [ref=e631]: download.suggestedFilename()
+                  - text: + persist via
+                  - code [ref=e632]: download.saveAs('out/foo.txt')
+                  - text: .
+                - listitem [ref=e633]:
+                  - text: Bonus — read the blob via
+                  - code [ref=e634]: const stream = await download.createReadStream();
+                  - text: .
+            - group [ref=e635]:
+              - generic "Playwright solution setInputFiles + download event handling. Show solution" [ref=e636] [cursor=pointer]:
+                - generic [ref=e640]:
+                  - strong [ref=e641]: Playwright solution
+                  - generic [ref=e642]: setInputFiles + download event handling.
+                - generic [ref=e643]: Show solution
+```
+
+# Test source
+
+```ts
+  1  | import { test, expect } from '@playwright/test';
+  2  | import * as path from 'path';
+  3  | 
+  4  | test("Testing upload", async ({ page }) => {
+  5  | 
+  6  | 
+  7  | 
+  8  |     await page.goto("https://app.thetestingacademy.com/playwright/widgets/upload-download", { waitUntil: "load" });
+  9  |     const filePath = path.join(__dirname, "dummy.txt");
+  10 |     console.log("---->" + filePath);
+  11 | 
+> 12 |     await page.getByTestId("single-upload").setInputFiles(filePath);
+     |     ^ Error: ENOENT: no such file or directory, stat '/Users/vineetverma/Desktop/Projects/LearningPlaywrightFundamentals/tests/15_FileUpload_Download/dummy.txt'
+  13 |     await expect(page.getByTestId("single-preview")).toContainText("dummy.txt");
+  14 | 
+  15 | })
+  16 | 
+```
