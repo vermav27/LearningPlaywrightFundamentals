@@ -10,7 +10,7 @@
 - Uses GitHub repositories to host and push the project code. Confidence: 0.6
 - Gives terse, targeted instructions referencing specific files/lines when reporting issues to fix. Confidence: 0.7
 - Normally makes/applies the code changes and runs and verifies the tests personally, but in recent sessions also repeatedly asks the agent to run specific specs — e.g., to reproduce a reported issue before fixing it, or "run test and give suggestions". Confidence: 0.6
-- Wants to review and approve the approach before the agent implements changes for non-trivial work (e.g., flakiness fixes), rather than the agent proceeding straight to implementation. Confidence: 0.7
+- Wants to review and approve the approach before the agent implements changes for non-trivial work (e.g., flakiness fixes), rather than the agent proceeding straight to implementation; explicitly asks to be told the issue/root cause first ("firstly tell me the issue. get approval and then fix") before any edit is made. Confidence: 0.8
 - Wants the agent to actually run the affected spec to reproduce an issue before attempting to fix it. Confidence: 0.7
 - Frequently asks for a code-quality review plus suggestions on individual spec files (e.g., "is my code fine?"). Confidence: 0.7
 - Wants custom HTML test reports to include screenshots, video, and traces. Confidence: 0.6
@@ -22,3 +22,5 @@
 - When asking for a reference doc on a feature/API, expects exhaustive coverage of every item in that category — not a curated subset. Confidence: 0.6
 - Prefers docs written in a "very easy", beginner-friendly format that shows how to use each item, not just what it is. Confidence: 0.6
 - Expects requested changes to actually be applied; re-requests work when changes are not visible. Confidence: 0.6
+- Keeps generated test artifacts (e.g., `allure-results/`, `custom-report/`) out of commits, committing only the hand-written source/spec files. Confidence: 0.6
+- Asks for commit-and-push as a standalone task (e.g., "commit and push the code") and expects the agent to inspect repo state, confirm scope for ambiguous cases, then commit to the working branch (e.g., `task`) and push to `origin`. Confidence: 0.5
