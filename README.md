@@ -1,6 +1,6 @@
 # Learning Playwright Fundamentals
 
-This repository contains beginner-friendly Playwright automation examples written with TypeScript. It covers Playwright basics, browser-context-page handling, test options, annotations, `test.describe()`, locator commands, assertions, and interview-focused notes.
+This repository contains beginner-friendly Playwright automation examples written with TypeScript. It covers Playwright basics, browser-context-page handling, test options, annotations, `test.describe()`, locator commands, assertions, shadow DOM, file upload and download, scrolling, test hooks, and interview-focused notes.
 
 ## Repository Contents
 
@@ -21,7 +21,12 @@ This repository contains beginner-friendly Playwright automation examples writte
 │   ├── 10_KeyboardEvents/
 │   ├── 11_Hover_Drag_Drop/
 │   ├── 12_Alerts/
-│   └── 13_svg/
+│   ├── 13_svg/
+│   ├── 14_ShadowDOM/
+│   ├── 15_FileUpload_Download/
+│   ├── 16_Scroll_ToElement/
+│   ├── 17_Assertions/
+│   └── 18_TestHooks/
 ├── utils/
 │   └── CustomReporter.ts
 ├── playwright.config.ts
@@ -49,6 +54,12 @@ This repository contains beginner-friendly Playwright automation examples writte
 - Added JavaScript alert, confirm, and prompt handling with `page.on('dialog')`.
 - Added SVG examples for clicking SVG elements, reading SVG attributes, using SVG XPath with `name()`, and extracting map labels.
 - Added an Applitools demo task with reusable utility functions for login, URL verification, table amount parsing, and total validation.
+- Added shadow DOM examples: open shadow roots handled by normal locators, and closed shadow roots forced open with `page.addInitScript()`.
+- Added file upload (single and multiple files with `path.join(__dirname, ...)`) and file download examples with `page.waitForEvent("download")`.
+- Added a JavaScript coding task that counts character occurrences in a string.
+- Added scrolling examples: `scrollIntoViewIfNeeded()`, `window.scrollBy()`/`scrollTo()` through `page.evaluate()`, and lazy-loaded list handling.
+- Added an assertions cheat sheet covering locator, page, generic, soft, polling, and asymmetric assertions.
+- Added test hooks (`beforeAll`, `afterAll`, `beforeEach`, `afterEach`), `test.step()`, and `test.describe.serial()`, with a hooks reference document.
 - The notes file has two main sections:
   - **Notes**: Playwright concepts used in the current `.ts` files with explanations and examples.
   - **Interview Questions**: Playwright with JavaScript/TypeScript interview questions and answers.
@@ -114,6 +125,17 @@ The current test files cover:
 - Reusable utility functions with typed `Page` parameters and typed return values
 - URL verification with `await expect(page).toHaveURL(...)`
 - Parsing table values into numbers and validating calculated totals
+- Shadow DOM: open shadow roots pierced by CSS and `getBy*` locators, and closed shadow roots patched open with `page.addInitScript()`
+- Single and multiple file upload with `setInputFiles()` and project-relative paths
+- File download with `page.waitForEvent("download")` and `download.saveAs()`
+- Character-frequency counting with `for...of` (JavaScript interview task)
+- Scrolling with `scrollIntoViewIfNeeded()` and `page.evaluate()` (`window.scrollBy()`, `window.scrollTo()`)
+- Lazy-loading and infinite-scroll lists, bounded scroll loops, and `expect.poll()`
+- Assertion reference: locator and page assertions, generic assertions, `.not`, custom messages, timeouts, `expect.soft()`, `expect.poll()`, `toPass()`, `expect.configure()`, asymmetric matchers, and `expect.extend()`
+- `toBeEditable()` and `toHaveAttribute()` assertions
+- Test hooks: `test.beforeAll()`, `test.afterAll()`, `test.beforeEach()`, and `test.afterEach()` with hook titles
+- Grouping report steps with `test.step()`
+- Serial execution with `test.describe.serial()`
 
 ## Test Files
 
@@ -206,6 +228,32 @@ The current test files cover:
 - `tests/13_svg/42_Real_svg_concept.spec.ts`: real SVG map handling with `path`, `text`, `tspan`, class parsing, and dynamic SVG XPath
 - `tests/13_svg/43_Task_AppliTools.spec.ts`: Applitools demo table-total validation using utility helpers
 - `tests/13_svg/43_Task_Utility.ts`: reusable functions for login, URL assertion, table amount calculation, and final total assertion
+
+### Shadow DOM
+
+- `tests/14_ShadowDOM/44_shadowExample.spec.ts`: filling fields inside an open shadow root with `getByTestId()` and `getByRole()`
+- `tests/14_ShadowDOM/45_shadowDOM_Task.spec.ts`: SelectorsHub practice page, using `page.addInitScript()` to force closed shadow roots open
+
+### File Upload and Download
+
+- `tests/15_FileUpload_Download/46_FileUploaddownload.spec.ts`: single and multiple file upload with `setInputFiles()` and preview assertions
+- `tests/15_FileUpload_Download/47_download.spec.ts`: download handling with `page.waitForEvent("download")` and `saveAs()`
+- `tests/15_FileUpload_Download/48_Task.spec.ts`: JavaScript task that counts how often each character appears in a string
+- `tests/15_FileUpload_Download/DummyFiles/`: `dummy.txt` and `MultiFile.txt` used by the upload tests
+
+### Scroll to Element
+
+- `tests/16_Scroll_ToElement/49_scroll.spec.ts`: four ways to scroll (to an element, by an offset, to the bottom, to the top)
+- `tests/16_Scroll_ToElement/50_scroll_LazyLoad.spec.ts`: loads every item in a lazy list by scrolling until the item count stops changing
+
+### Assertions
+
+- `tests/17_Assertions/Assertions_CheatSheet.md`: built-in assertions grouped into mostly used and less used, with examples
+
+### Test Hooks
+
+- `tests/18_TestHooks/51_TestStep.spec.ts`: OrangeHRM login-page checks using all four hooks, `test.step()`, and `test.describe.serial()`
+- `tests/18_TestHooks/TestHook_Brief.md`: hook reference covering execution order, scope, `testInfo`, retries, serial mode, timeouts, and hooks vs fixtures
 
 ## Playwright Notes
 
@@ -308,6 +356,17 @@ Run only the Applitools utility-task example:
 npx playwright test tests/13_svg/43_Task_AppliTools.spec.ts
 ```
 
+Run the shadow DOM, file upload/download, scroll, and test-hook examples:
+
+```bash
+npx playwright test tests/14_ShadowDOM
+npx playwright test tests/15_FileUpload_Download
+npx playwright test tests/16_Scroll_ToElement
+npx playwright test tests/18_TestHooks
+```
+
+`47_download.spec.ts` saves the downloaded file to a local absolute path, so update that path before running it on another machine. `tests/17_Assertions` contains only a reference document, so there is nothing to run there.
+
 Run tests from a specific folder:
 
 ```bash
@@ -400,4 +459,9 @@ After running the command, a browser window opens. Perform the actions you want 
 13. Practice hover, context-click, and drag-and-drop from `tests/11_Hover_Drag_Drop`.
 14. Practice JavaScript alert, confirm, and prompt handling from `tests/12_Alerts`.
 15. Practice SVG locators and reusable helper utilities from `tests/13_svg`.
-16. Revise the **Interview Questions** section before Playwright interviews.
+16. Practice open and closed shadow DOM handling from `tests/14_ShadowDOM`.
+17. Practice file upload and download from `tests/15_FileUpload_Download`.
+18. Practice scrolling and lazy-loaded lists from `tests/16_Scroll_ToElement`.
+19. Read the assertions cheat sheet in `tests/17_Assertions`.
+20. Learn hooks, `test.step()`, and serial mode from `tests/18_TestHooks`.
+21. Revise the **Interview Questions** section before Playwright interviews.

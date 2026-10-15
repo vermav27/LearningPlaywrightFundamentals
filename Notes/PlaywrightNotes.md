@@ -51,6 +51,16 @@ Source files currently covered:
 - `tests/13_svg/42_Real_svg_concept.spec.ts`
 - `tests/13_svg/43_Task_AppliTools.spec.ts`
 - `tests/13_svg/43_Task_Utility.ts`
+- `tests/14_ShadowDOM/44_shadowExample.spec.ts`
+- `tests/14_ShadowDOM/45_shadowDOM_Task.spec.ts`
+- `tests/15_FileUpload_Download/46_FileUploaddownload.spec.ts`
+- `tests/15_FileUpload_Download/47_download.spec.ts`
+- `tests/15_FileUpload_Download/48_Task.spec.ts`
+- `tests/16_Scroll_ToElement/49_scroll.spec.ts`
+- `tests/16_Scroll_ToElement/50_scroll_LazyLoad.spec.ts`
+- `tests/17_Assertions/Assertions_CheatSheet.md`
+- `tests/18_TestHooks/51_TestStep.spec.ts`
+- `tests/18_TestHooks/TestHook_Brief.md`
 - `utils/CustomReporter.ts`
 
 ## Notes
@@ -1782,6 +1792,352 @@ Key points:
 - `expect(page).toHaveURL(...)` is preferred for navigation assertions.
 - For amount parsing, remove currency symbols, spaces, and commas before calling `Number(...)`.
 
+### 53. Shadow DOM
+
+Shadow DOM lets a web component keep its own private DOM tree (a *shadow root*) attached to a host element. Markup and styles inside it are isolated from the main page, which is why `document.querySelector()` and Selenium-style lookups often cannot find those elements.
+
+#### Open Shadow Roots (`44_shadowExample.spec.ts`)
+
+Playwright's CSS and `getBy*` locators pierce **open** shadow roots automatically, so no special code is needed:
+
+```ts
+await page.getByTestId("card-account-email").fill("hello@gmail.com");
+await page.getByTestId("card-account-password").fill("hello@gmail.com");
+await page.getByRole("button", { name: "Submit" }).first().click();
+```
+
+`.first()` is used because more than one "Submit" button matches; without it Playwright throws a strict mode violation.
+
+#### Closed Shadow Roots (`45_shadowDOM_Task.spec.ts`)
+
+A shadow root created with `attachShadow({ mode: 'closed' })` cannot be reached from outside, not even by Playwright. The task works around this by patching `attachShadow` before the page's own scripts run, so every shadow root is created as open:
+
+```ts
+await page.addInitScript(() => {
+  const originalAttachShadow = Element.prototype.attachShadow;
+
+  Element.prototype.attachShadow = function (init) {
+    return originalAttachShadow.call(this, { ...init, mode: 'open' });
+  };
+});
+
+await page.goto("https://selectorshub.com/xpath-practice-page/", { waitUntil: "load" });
+await page.locator("#kils").fill("Test User");
+await page.locator("#pizza").fill("Farmhouse");
+```
+
+Key points:
+
+- XPath does not pierce shadow DOM. CSS, `getByRole()`, `getByTestId()`, `getByText()`, and the other `getBy*` locators do.
+- There is no "switch into the shadow root" step, unlike Selenium 4's `element.getShadowRoot()`.
+- `page.addInitScript()` must be called **before** `page.goto()`. It runs in every new document (each navigation and each child frame) before any script on the page.
+- Forcing closed roots open changes how the app runs, so treat it as a test-only workaround. For your own product, asking developers for open shadow roots or test ids is a cleaner fix.
+
+### 54. File Upload and Download
+
+`tests/15_FileUpload_Download` covers file transfer on the Testing Academy upload-download widget. The files used for upload live in `DummyFiles/` inside the repository.
+
+#### Upload (`46_FileUploaddownload.spec.ts`)
+
+```ts
+import * as path from 'path';
+
+const filePath = path.join(__dirname, "DummyFiles", "dummy.txt");
+await page.getByTestId("single-upload").setInputFiles(filePath);
+await expect(page.getByTestId("single-preview")).toContainText("dummy.txt");
+
+// Multiple files: pass an array of paths
+await page.getByTestId("multi-upload").setInputFiles([filePath1, filePath2]);
+await expect(page.getByTestId("multi-preview")).toContainText("dummy.txt");
+```
+
+Key points:
+
+- `path.join(__dirname, ...)` builds the path relative to the spec file, so it works on any machine and on CI. This fixes the absolute-path problem in `30_TASK_qaForm.spec.ts`.
+- `setInputFiles()` works on an `<input type="file">`, even when the input is hidden behind a styled button. Uploading several files needs an input with the `multiple` attribute.
+- `setInputFiles([])` clears the selection.
+- The preview assertion proves the app actually received the file, not just that the call did not throw.
+
+Improvements to keep in mind:
+
+- The multi-upload test only checks `dummy.txt`. Assert `MultiFile.txt` too, otherwise the test passes even if only the first file was accepted.
+
+#### Download (`47_download.spec.ts`)
+
+```ts
+const downloadPromise = page.waitForEvent("download"); // start listening first
+await page.getByTestId("download-text").click();       // trigger the download
+const download = await downloadPromise;                // the Download object
+await download.saveAs(".../DummyFiles/Test.txt");      // keep a copy
+```
+
+Key points:
+
+- Create the `waitForEvent("download")` promise **before** the click. If you click first, the event can fire before the listener exists and the test waits until timeout.
+- Playwright saves downloads to a temporary folder and deletes them when the browser context closes. Call `download.saveAs()` to keep the file, or `download.path()` to read the temporary copy.
+- `download.suggestedFilename()` returns the name the browser would use, which is useful in assertions.
+
+Improvements to keep in mind:
+
+- `saveAs()` uses an absolute path from one laptop and writes into the source folder. Use `testInfo.outputPath(download.suggestedFilename())` so the file goes into `test-results/`.
+- The test has no assertion. Check `download.suggestedFilename()`, or read the saved file with `fs.readFileSync()` and assert its content.
+
+### 55. JavaScript Practice: Counting Characters
+
+`48_Task.spec.ts` is not a Playwright feature but a common coding question in QA automation interviews: count how many times each character appears in a string.
+
+```ts
+let str = "my name is vineet verma.";
+let count: any = {};
+
+for (let char of str) {
+  if (count[char]) {
+    count[char]++;
+  } else {
+    count[char] = 1;
+  }
+}
+
+console.log(count); // { m: 3, y: 1, ' ': 4, n: 2, a: 2, e: 4, ... }
+```
+
+Key points:
+
+- `for...of` loops over each character of a string.
+- Type the object as `Record<string, number>` instead of `any` so TypeScript checks the values.
+- Shorter form: `count[char] = (count[char] ?? 0) + 1;`
+- The result includes spaces and the full stop. Skip them with a check such as `if (!/[a-z]/i.test(char)) continue;` when only letters should count.
+- A `Map<string, number>` is an alternative that keeps insertion order and has `get()`/`set()` methods.
+- The test asks for `{ page }` but never uses it, so Playwright still launches a browser. `async () => {}` runs the logic without one.
+
+### 56. Scrolling
+
+`tests/16_Scroll_ToElement` uses the Testing Academy scroll widget. Both files open the page in `test.beforeEach()`.
+
+#### Ways to Scroll (`49_scroll.spec.ts`)
+
+```ts
+// 1. Scroll a specific element into view
+await page.getByTestId("deep-anchor").scrollIntoViewIfNeeded();
+
+// 2. Scroll by an offset with JavaScript
+await page.evaluate(() => window.scrollBy(0, 1000));
+
+// 3. Scroll to the bottom of the page
+await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+
+// 4. Scroll back to the top
+await page.evaluate(() => window.scrollTo(0, 0));
+```
+
+Other options:
+
+- `await page.mouse.wheel(0, 1000)` scrolls like a real mouse wheel and fires `wheel` events, which some pages listen for.
+- `await page.keyboard.press('End')` or `'PageDown'` scrolls with the keyboard.
+
+Key points:
+
+- Playwright already scrolls an element into view before `click()`, `fill()`, `hover()`, and other actions. Explicit scrolling is needed only when scrolling is the behaviour under test (lazy loading, sticky headers, "back to top" buttons) or before a screenshot.
+- `scrollIntoViewIfNeeded()` does nothing if the element is already fully visible.
+- `page.evaluate()` runs the function inside the browser, not in Node.js. It cannot read test variables directly; pass them as the second argument: `await page.evaluate((y) => window.scrollBy(0, y), 1000)`.
+- `await expect(locator).toBeInViewport()` asserts that an element is actually on screen after scrolling.
+
+#### Lazy Loading and Infinite Scroll (`50_scroll_LazyLoad.spec.ts`)
+
+The lazy list adds more `<li>` items each time its section comes into view. The test scrolls the section into view, counts items, scrolls away, and repeats until the count stays the same twice in a row:
+
+```ts
+const lazySection = page.getByTestId("section-lazy");
+const list = page.getByTestId("lazy-list").locator('li');
+
+let previousCount = 0;
+let stableAttempts = 0;
+const maxAttempts = 10;
+
+for (let attempt = 0; attempt < maxAttempts; attempt++) {
+  await lazySection.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(700);
+  const currentCount = await list.count();
+
+  if (currentCount === previousCount) {
+    stableAttempts++;
+  } else {
+    stableAttempts = 0;
+    previousCount = currentCount;
+  }
+  if (stableAttempts >= 2) break;
+
+  // Scroll away so coming back triggers the next batch
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(300);
+}
+
+const finalCount = await list.count();
+expect(finalCount).toBeGreaterThan(0);
+```
+
+The commented-out original version waits with `expect.poll()` instead of fixed timeouts:
+
+```ts
+const initialCount = await list.count();
+await list.last().scrollIntoViewIfNeeded();
+
+await expect.poll(async () => list.count(), {
+  message: "expected_items > 10",
+  timeout: 10000
+}).toBeGreaterThan(initialCount);
+```
+
+Key points:
+
+- Always put an upper limit (`maxAttempts`) on a scroll loop so a page that keeps loading cannot hang the test.
+- "Count stopped changing" is a practical signal that all data has loaded when the page shows no "end of list" message.
+- `expect.poll()` calls the function repeatedly until the matcher passes or the timeout ends. It waits only as long as needed, unlike `waitForTimeout()`.
+- Scrolling the **last item** into view is the usual trigger for infinite scroll, because the page loads more when the user reaches the end.
+- If the page shows an end marker or a known total, assert that instead, for example `await expect(list).toHaveCount(50)`.
+
+Improvements to keep in mind:
+
+- Both files use `test.describe("Verify Scroll", async () => ...)`. Keep the `describe` callback synchronous (see section 22).
+- The fixed `waitForTimeout(700)` and `waitForTimeout(300)` slow every attempt and can still be too short on a slow run. Replace them with `expect.poll()` on the item count.
+
+### 57. Assertions Cheat Sheet
+
+`tests/17_Assertions/Assertions_CheatSheet.md` lists the built-in `expect` assertions, grouped into "mostly used" and "less used" with an example for each. This section summarizes the concepts not covered in sections 18, 19, and 30.
+
+There are three kinds of `expect`:
+
+| Kind | Example | Retries? | Needs `await`? |
+| --- | --- | --- | --- |
+| Locator/page (web-first) | `await expect(locator).toBeVisible()` | Yes, until timeout | Yes |
+| Generic value | `expect(count).toBe(5)` | No, checks once | No |
+| Polling/retry | `await expect.poll(fn).toBe(...)`, `await expect(async () => {...}).toPass()` | Yes | Yes |
+
+Most-used locator assertions: `toBeVisible()`, `toBeHidden()`, `toBeEnabled()`, `toBeDisabled()`, `toBeChecked()`, `toBeEditable()`, `toHaveText()`, `toContainText()`, `toHaveValue()`, `toHaveValues()`, `toHaveCount()`, `toHaveAttribute()`, `toHaveClass()`, and `toHaveCSS()`. Page assertions: `toHaveURL()` and `toHaveTitle()`.
+
+Modifiers:
+
+```ts
+await expect(page.getByText('Error')).not.toBeVisible();                              // negate
+await expect(page.getByRole('button'), 'Submit button should appear').toBeVisible();  // custom message
+await expect(page.locator('.result')).toBeVisible({ timeout: 15_000 });               // per-assertion timeout
+```
+
+**Soft assertions** record a failure and let the test continue, so one run reports several problems:
+
+```ts
+await expect.soft(page.getByTestId('status')).toHaveText('Passed');
+await expect.soft(page.getByTestId('count')).toHaveText('3');
+// The test is still marked failed at the end if any soft assertion failed
+```
+
+**`expect.poll()` vs `toPass()`**:
+
+```ts
+// poll: retry a function that returns a value
+await expect.poll(() => list.count(), { timeout: 10_000 }).toBeGreaterThan(10);
+
+// toPass: retry a whole block until no assertion inside it throws
+await expect(async () => {
+  const response = await page.request.get('/api/status');
+  expect(response.status()).toBe(200);
+}).toPass({ timeout: 15_000 });
+```
+
+**`expect.configure()`** creates a reusable `expect` with different defaults:
+
+```ts
+const slowExpect = expect.configure({ timeout: 15_000 });
+await slowExpect(page.locator('.report')).toBeVisible();
+```
+
+**Asymmetric matchers** check part of a value inside `toEqual()`:
+
+```ts
+expect(user).toEqual({ id: expect.any(Number), name: expect.stringContaining('Vin') });
+expect(roles).toEqual(expect.arrayContaining(['admin']));
+```
+
+**`expect.extend()`** adds a custom matcher when the built-in ones cannot express a check. The cheat sheet has a `toBeWithinRange()` example.
+
+Key points:
+
+- Prefer `await expect(locator).toBeVisible()` over `expect(await locator.isVisible()).toBe(true)`. The first retries; the second checks once and is flaky.
+- `toHaveCount(n)` waits for exactly `n` matches; `expect(await locator.count()).toBe(n)` checks once.
+- `toBeEditable()` checks that the element is enabled **and** not `readonly`; `toBeEnabled()` only checks that it is not disabled.
+- Use `expect.soft()` only when later checks are still meaningful after a failure, such as several independent fields on one page. Do not use it for a step whose failure makes the rest of the test pointless, such as login.
+
+### 58. Test Hooks, `test.step()`, and Serial Mode
+
+`51_TestStep.spec.ts` uses all four hooks around two OrangeHRM login-page tests, groups checks with `test.step()`, and runs the block in serial mode. `tests/18_TestHooks/TestHook_Brief.md` explains hooks in more detail.
+
+```ts
+test.describe.serial("Login Page", () => {
+
+  test.beforeAll("Ping Test", () => {
+    console.log("Starting the test suite.");
+  });
+
+  test.afterAll("Test Closure", () => {
+    console.log("Ending the test suite.");
+  });
+
+  test.beforeEach("Verify user is on login page - beforetest", async ({ page }) => {
+    await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: "load" });
+    let heading = await page.locator("//h5[contains(@class,'orangehrm-login-title')]").innerText();
+    expect(heading).toBe("Login");
+  });
+
+  test.afterEach("Verify user is on login page - aftertest", async ({ page }) => {
+    // same heading check as beforeEach
+  });
+
+  test("Verify the visibility of username", async ({ page }) => {
+    // The spec file calls test.step() without await; await is shown here because it is required
+    await test.step("Locating the username is editable", async () => {
+      await expect(page.locator("//input[@name='username']")).toBeEditable();
+    });
+
+    await test.step("Verifying the attribute", async () => {
+      await expect(page.locator("//input[@name='username']")).toHaveAttribute("placeholder", "Username");
+    });
+  });
+});
+```
+
+| Hook | When it runs | Can use `page`? |
+| --- | --- | --- |
+| `test.beforeAll` | Once per worker, before the first test in its scope | No; use `browser` |
+| `test.afterAll` | Once per worker, after the last test in its scope | No; use `browser` |
+| `test.beforeEach` | Before every test in its scope | Yes |
+| `test.afterEach` | After every test in its scope, even when the test failed | Yes |
+
+Execution order for this file:
+
+```text
+beforeAll
+  beforeEach -> test 1 (username) -> afterEach
+  beforeEach -> test 2 (password) -> afterEach
+afterAll
+```
+
+Key points:
+
+- Hooks declared inside a `describe` apply only to that block; hooks at the top of a file apply to every test in the file. With nested blocks, outer `beforeEach` runs first and inner `afterEach` runs first.
+- The optional first argument (`"Ping Test"`) is a title shown in the HTML report and trace.
+- Hooks can take `testInfo` as the second argument. A common pattern attaches a screenshot in `afterEach` when `testInfo.status !== testInfo.expectedStatus`.
+- `beforeAll` can run again after a failure, because Playwright replaces the worker. Keep it safe to repeat.
+- `test.step()` is not a hook. It groups actions into named steps in the report and trace, so a failure shows which step broke. It returns the callback's return value.
+- `test.describe.serial()` runs tests in order, skips the rest after a failure, and reruns the whole group on retry. `test.describe.configure({ mode: 'serial' })` is the newer form.
+
+Improvements to keep in mind:
+
+- Both tests call `test.step()` without `await`. The test function can finish before the steps do, so the step assertions may run while the page is being closed and a failure may not be reported against the test. Always write `await test.step(...)`.
+- `let userNameLocator = await page.locator(...)`: the `await` is not needed because `page.locator()` is synchronous.
+- `innerText()` followed by `expect(heading).toBe("Login")` checks once. `await expect(page.locator("//h5[...]")).toHaveText("Login")` retries and gives a clearer error.
+- The two tests do not depend on each other, so serial mode is not needed. Plain `test.describe()` lets them run in parallel.
+- The `afterEach` repeats the `beforeEach` check. A more useful `afterEach` captures evidence on failure or cleans up test data.
+
 ## Interview Questions
 
 ### Playwright Fundamentals
@@ -3220,3 +3576,298 @@ For a larger framework, prefer a reusable parsing helper that handles currency s
 #### 224. What is the difference between `console.log()` and assertion in a test?
 
 `console.log()` only prints information. It does not decide whether the test passes or fails. Assertions such as `expect(total).toEqual(1996.22)` validate behavior and fail the test when the result is wrong.
+
+### Shadow DOM
+
+#### 225. What is shadow DOM?
+
+Shadow DOM is a browser feature used by web components. A host element gets its own hidden DOM tree (a shadow root) whose markup and styles are isolated from the main page. Elements inside it are not found by `document.querySelector()` on the main document.
+
+#### 226. How does Playwright handle shadow DOM?
+
+CSS and all `getBy*` locators pierce open shadow roots automatically, so `page.getByTestId('card-account-email').fill(...)` works even when the input is inside a web component. No special API or switching is needed. XPath is the exception: it does not pierce shadow roots.
+
+#### 227. What is the difference between open and closed shadow roots?
+
+`attachShadow({ mode: 'open' })` exposes the root through `element.shadowRoot`, and Playwright locators can reach inside it. `mode: 'closed'` hides it (`element.shadowRoot` returns `null`), and Playwright locators cannot see inside it.
+
+#### 228. How can you automate elements inside a closed shadow root?
+
+In order of preference:
+
+1. Ask developers to use open mode, at least in test builds.
+2. Reach the fields with the keyboard: focus a nearby element, then use `Tab` and `page.keyboard.type()`, because keyboard focus does move into closed shadow roots.
+3. As a test-only workaround, patch `attachShadow` with `page.addInitScript()` so every root is created open, as in `45_shadowDOM_Task.spec.ts`.
+
+#### 229. What does `page.addInitScript()` do?
+
+It registers a script that runs in every new document of the page, after each navigation and in every child frame, before the page's own scripts. Common uses are mocking `Date` or `Math.random`, seeding `localStorage`, stubbing browser APIs, and patching `attachShadow`. Call it before `page.goto()`. `context.addInitScript()` applies it to every page in the context.
+
+#### 230. How is shadow DOM handling different in Selenium and Playwright?
+
+Selenium 4 needs `element.getShadowRoot()` and then a CSS search on that root, one level at a time for nested components, and XPath does not work inside it. Playwright's CSS and `getBy*` locators go through any number of open shadow roots in a single locator.
+
+### File Upload and Download
+
+#### 231. How do you upload multiple files?
+
+Pass an array of paths:
+
+```ts
+await page.getByTestId('multi-upload').setInputFiles([filePath1, filePath2]);
+```
+
+The `<input type="file">` must have the `multiple` attribute. Afterwards, assert that every file name appears in the preview.
+
+#### 232. Why build file paths with `path.join(__dirname, ...)`?
+
+`__dirname` is the folder of the current spec file, so `path.join(__dirname, 'DummyFiles', 'dummy.txt')` points to the same file on every machine and CI agent. `path.join()` also uses the correct separator for Windows or macOS/Linux. A hard-coded `/Users/<name>/...` path works on one laptop only.
+
+#### 233. Can you upload a file without having it on disk?
+
+Yes. Pass an object with a buffer:
+
+```ts
+await page.getByTestId('single-upload').setInputFiles({
+  name: 'report.txt',
+  mimeType: 'text/plain',
+  buffer: Buffer.from('test content'),
+});
+```
+
+#### 234. Why must `page.waitForEvent('download')` be called before the click?
+
+`waitForEvent()` only catches events that happen after it starts listening. If you click first and wait afterwards, a fast download can fire before the listener exists and the test waits until timeout. Store the promise, click, then `await` the promise.
+
+#### 235. What happens to a downloaded file if you do not call `saveAs()`?
+
+Playwright stores it in a temporary folder and deletes it when the browser context closes. `download.path()` returns that temporary path; `download.saveAs(path)` copies it to a permanent location. For test output, use `testInfo.outputPath(download.suggestedFilename())` so files go into `test-results/` instead of the source folders.
+
+#### 236. How do you check the content of a downloaded file?
+
+Save it, read it with Node's `fs` module, and assert:
+
+```ts
+test('download content', async ({ page }, testInfo) => {
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByTestId('download-text').click();
+  const download = await downloadPromise;
+
+  const filePath = testInfo.outputPath(download.suggestedFilename());
+  await download.saveAs(filePath);
+  expect(fs.readFileSync(filePath, 'utf-8')).toContain('expected text');
+});
+```
+
+### JavaScript Coding Task
+
+#### 237. How do you count how many times each character appears in a string?
+
+```ts
+const str = 'my name is vineet verma.';
+const count: Record<string, number> = {};
+
+for (const char of str) {
+  count[char] = (count[char] ?? 0) + 1;
+}
+```
+
+`for...of` visits each character. Skip spaces and punctuation with a check such as `if (!/[a-z]/i.test(char)) continue;`. A `Map<string, number>` works too.
+
+#### 238. Does a test with `async ({ page })` launch a browser even if it never uses `page`?
+
+Yes. Fixtures are created when a test asks for them, so requesting `page` makes Playwright create a browser, context, and page. A pure logic test such as `48_Task.spec.ts` can use `async () => {}` and skip the browser entirely.
+
+### Scrolling and Lazy Loading
+
+#### 239. Do you need to scroll to an element before clicking it?
+
+No. Playwright scrolls the element into view as part of its actionability checks before `click()`, `fill()`, `hover()`, and similar actions. Explicit scrolling is for testing scroll behaviour itself, such as lazy loading, infinite scroll, sticky headers, or "back to top" buttons, or for positioning the page before a screenshot.
+
+#### 240. What are the ways to scroll in Playwright?
+
+```ts
+await locator.scrollIntoViewIfNeeded();                                     // to an element
+await page.evaluate(() => window.scrollBy(0, 1000));                        // by an offset
+await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));  // to the bottom
+await page.evaluate(() => window.scrollTo(0, 0));                           // to the top
+await page.mouse.wheel(0, 1000);                                            // real wheel events
+await page.keyboard.press('End');                                           // keyboard
+```
+
+Prefer `scrollIntoViewIfNeeded()` when there is a target element, and `mouse.wheel()` when the page reacts to wheel events.
+
+#### 241. What does `page.evaluate()` do?
+
+It runs a function inside the browser page and returns the result to the test. The function is serialized and sent to the browser, so it cannot use variables from the test file directly; pass them as an argument:
+
+```ts
+const height = await page.evaluate(() => document.body.scrollHeight);
+await page.evaluate((y) => window.scrollBy(0, y), 500);
+```
+
+The return value must be serializable, such as strings, numbers, arrays, and plain objects.
+
+#### 242. How do you scroll inside a scrollable container instead of the whole page?
+
+`window.scrollTo()` only moves the page. For a scrollable `div`, scroll an element inside it into view, or set the container's `scrollTop`:
+
+```ts
+await page.getByTestId('lazy-list').locator('li').last().scrollIntoViewIfNeeded();
+await page.getByTestId('lazy-list').evaluate((el) => { el.scrollTop = el.scrollHeight; });
+```
+
+Hovering over the container and calling `page.mouse.wheel()` also works.
+
+#### 243. How do you automate infinite scroll or lazy loading?
+
+Scroll the last loaded item into view, wait until the item count increases, and repeat until the count stops growing or a maximum number of attempts is reached:
+
+```ts
+const items = page.getByTestId('lazy-list').locator('li');
+const before = await items.count();
+await items.last().scrollIntoViewIfNeeded();
+await expect.poll(() => items.count(), { timeout: 10_000 }).toBeGreaterThan(before);
+```
+
+Always cap the loop so a page that keeps loading cannot hang the test. If the page shows an end message or a known total, assert that instead.
+
+#### 244. Why is `waitForTimeout()` inside a scroll loop a problem?
+
+A fixed wait is too long on a fast run, which adds up over every iteration, and may be too short on a slow run, which makes the test flaky. `expect.poll()` or `expect(items).toHaveCount(n)` waits only as long as needed.
+
+### Assertions
+
+#### 245. What is a soft assertion?
+
+`expect.soft()` records a failure but lets the test keep running. The test is still marked failed at the end, and the report lists every failed soft check. It is useful for checking several independent fields on one page in a single run. Avoid it when a failure makes the rest of the test meaningless, such as a failed login.
+
+#### 246. What is the difference between `expect.poll()` and `expect(...).toPass()`?
+
+`expect.poll(fn)` retries a function that **returns a value** and applies one matcher to it: `await expect.poll(() => getStatus()).toBe('done')`. `toPass()` retries a **block of code** until none of the assertions inside it throw, which suits multi-step checks. Give `toPass()` an explicit `timeout`.
+
+#### 247. What is the difference between `toHaveCount()` and `expect(await locator.count()).toBe()`?
+
+`toHaveCount()` retries until the number of matches equals the expected value. `locator.count()` returns the count at one moment, so the generic `toBe()` fails if the list is still loading.
+
+#### 248. What is the difference between `toBeEditable()` and `toBeEnabled()`?
+
+`toBeEnabled()` checks that the element is not disabled. `toBeEditable()` also checks that it is not `readonly`, so it proves a user can actually type into the field.
+
+#### 249. What is the difference between `toBeAttached()` and `toBeVisible()`?
+
+`toBeAttached()` passes when the element exists in the DOM or a shadow root, even if it is hidden. `toBeVisible()` also requires the element to be rendered with a non-empty size and without `visibility: hidden`.
+
+#### 250. How do you add a custom message or timeout to one assertion?
+
+```ts
+await expect(page.getByRole('button', { name: 'Submit' }), 'Submit button should appear')
+  .toBeVisible({ timeout: 15_000 });
+```
+
+The message appears in the report when the assertion fails. For many slow checks, create a configured instance with `expect.configure({ timeout: 15_000 })`. The global default is set with `expect: { timeout }` in `playwright.config.ts`.
+
+#### 251. What are asymmetric matchers?
+
+Matchers used inside `toEqual()` or `toMatchObject()` to check part of a value: `expect.any(Number)`, `expect.anything()`, `expect.stringContaining()`, `expect.stringMatching()`, `expect.arrayContaining()`, and `expect.objectContaining()`. They are useful for API responses with dynamic ids or timestamps:
+
+```ts
+expect(body).toEqual({ id: expect.any(Number), name: 'Vineet', createdAt: expect.any(String) });
+```
+
+#### 252. How do you create a custom matcher?
+
+Use `expect.extend()` and return `{ pass, message }`:
+
+```ts
+const customExpect = expect.extend({
+  toBeWithinRange(received: number, floor: number, ceiling: number) {
+    const pass = received >= floor && received <= ceiling;
+    return { pass, message: () => `Expected ${received} to be within ${floor} and ${ceiling}` };
+  },
+});
+
+customExpect(50).toBeWithinRange(1, 100);
+```
+
+Custom matchers keep repeated checks readable and give consistent failure messages.
+
+### Test Hooks, Steps, and Serial Mode
+
+#### 253. What hooks does Playwright Test provide?
+
+`test.beforeAll` and `test.afterAll` run once per worker for the file or `describe` block. `test.beforeEach` and `test.afterEach` run around every test. Hooks can be placed at file level or inside a `test.describe()`.
+
+#### 254. What is the execution order of hooks?
+
+```text
+beforeAll
+  beforeEach -> test 1 -> afterEach
+  beforeEach -> test 2 -> afterEach
+afterAll
+```
+
+With nested `describe` blocks, the outer `beforeEach` runs before the inner one, and the inner `afterEach` runs before the outer one.
+
+#### 255. Can you use the `page` fixture in `beforeAll`?
+
+No. `page` and `context` are created per test, while `beforeAll` runs once per worker, so Playwright throws an error if you request them. Use the worker-scoped `browser` fixture and create a page yourself:
+
+```ts
+test.beforeAll(async ({ browser }) => {
+  const page = await browser.newPage();
+  // one-time setup
+  await page.close();
+});
+```
+
+#### 256. Why can `beforeAll` run more than once?
+
+It runs once per **worker**, not once per test run. With several workers, each worker runs it. After a test fails, Playwright starts a new worker, which runs `beforeAll` again for the remaining tests. Setup must therefore be safe to repeat. For true one-time setup, use global setup or a setup project.
+
+#### 257. If `beforeEach` fails, does the test run? Does `afterEach` run?
+
+The test is skipped, but `afterEach` hooks still run. Cleanup must therefore handle partial setup, for example by checking that a record exists before deleting it.
+
+#### 258. How do you capture a screenshot only when a test fails?
+
+Use `testInfo` in `afterEach`:
+
+```ts
+test.afterEach(async ({ page }, testInfo) => {
+  if (testInfo.status !== testInfo.expectedStatus) {
+    await testInfo.attach('failure-screenshot', {
+      body: await page.screenshot(),
+      contentType: 'image/png',
+    });
+  }
+});
+```
+
+Comparing with `expectedStatus` handles `test.fail()` correctly. The config option `screenshot: 'only-on-failure'` does the same without code.
+
+#### 259. What is `test.step()` and why use it?
+
+It groups actions inside a test under a readable name. The HTML report, trace viewer, and custom reporters (`onStepBegin`/`onStepEnd`) show each step, so a failure points to the business step that broke, not only to a line of code. Steps can be nested and can return values:
+
+```ts
+const total = await test.step('Read order total', async () => {
+  return await page.getByTestId('total').innerText();
+});
+```
+
+#### 260. What happens if you call `test.step()` without `await`?
+
+The test function does not wait for the step. It can finish and start teardown while the step is still running, so the step's assertions may run against a closing page and a failure may not be reported against the test. `51_TestStep.spec.ts` has this problem. Always write `await test.step(...)`; the `@typescript-eslint/no-floating-promises` lint rule catches it.
+
+#### 261. What is `test.describe.serial()` and when would you use it?
+
+Tests in a serial group run one after another in the same worker. If one fails, the remaining tests are skipped, and on retry the whole group runs again. Use it only when tests depend on each other, such as create, edit, and delete of the same record. Independent tests should stay parallel. The newer syntax is `test.describe.configure({ mode: 'serial' })`.
+
+#### 262. When would you use a fixture instead of a hook?
+
+Hooks suit simple setup local to one file or `describe` block. Use a custom fixture (`test.extend()`) when setup is shared across files, depends on other fixtures, or needs guaranteed teardown. Fixtures are created only when a test asks for them, and their setup and teardown sit in one place.
+
+#### 263. Should `beforeEach` contain assertions?
+
+A quick check that setup worked, such as the login heading being visible, is fine and makes setup failures obvious. Use a web-first assertion such as `await expect(heading).toHaveText('Login')`, and keep the main checks in the test body so the report shows what the test is about.
