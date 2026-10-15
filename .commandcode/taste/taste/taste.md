@@ -23,4 +23,7 @@
 - Prefers docs written in a "very easy", beginner-friendly format that shows how to use each item, not just what it is. Confidence: 0.6
 - Expects requested changes to actually be applied; re-requests work when changes are not visible. Confidence: 0.6
 - Keeps generated test artifacts (e.g., `allure-results/`, `custom-report/`) out of commits, committing only the hand-written source/spec files. Confidence: 0.6
+- Prefers ESM `import` statements over CommonJS `require()` in TypeScript spec files, and dislikes mixing the two styles in one file. Confidence: 0.7
+- Prefers Node built-in modules over third-party packages — e.g., using `node:fs`/`node:path` instead of `fs-extra`, and removing the now-unused dependency from `package.json` rather than adding type packages. Confidence: 0.7
+- Prefers Node built-ins imported with the `node:` protocol prefix (e.g., `import fs from 'node:fs'`, `node:path`) so they resolve to Node's built-in modules with types from `@types/node`. Confidence: 0.6
 - Asks for commit-and-push as a standalone task (e.g., "commit and push the code") and expects the agent to inspect repo state, confirm scope for ambiguous cases, then commit to the working branch (e.g., `task`) and push to `origin`. Confidence: 0.5

@@ -1,0 +1,4 @@
+{
+  validData: { username: 'Admin', password: 'admin123' },
+  invalidData: { username: 'hellowworld', password: 'password' }
+}

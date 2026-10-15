@@ -1,0 +1,32 @@
+{
+    "name": "Vineet",
+    "age": 35,
+    "sex": "M",
+    "Phone": {
+        "Mobile": 8378786767,
+        "Office": 23435436
+    },
+    "address": {
+        "line1": "234",
+        "line2": "talab road",
+        "City": "Delhi",
+        "pincode": "110002"
+    },
+    "assets": [
+        "Home",
+        "Lamborgini",
+        "Nexon",
+        "Classic 350",
+        "iPad"
+    ],
+    "family": [
+        {
+            "name": "Ankita",
+            "age": 34
+        },
+        {
+            "name": "Jiya",
+            "age": 2
+        }
+    ]
+}
