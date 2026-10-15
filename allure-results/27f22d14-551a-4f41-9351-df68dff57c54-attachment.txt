@@ -1,5 +1,0 @@
-/Users/vineetverma/Desktop/Projects/LearningPlaywrightFundamentals/tests/19_DataDriven/02_TestingUsingJSON/data.json
-{
-  validData: { username: 'Admin', password: 'admin123' },
-  invalidData: { username: 'hellowworld', password: 'password' }
-}
