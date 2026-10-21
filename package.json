@@ -11,6 +11,7 @@
   "devDependencies": {
     "@faker-js/faker": "^10.6.0",
     "@playwright/test": "^1.63.0",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^26.6.4",
     "allure-playwright": "^3.12.2",
     "tsx": "^4.23.15"
@@ -20,6 +21,8 @@
     "allure-commandline": "^2.46.1",
     "dotenv": "^18.0.3",
     "googleapis": "^183.0.0",
+    "js-yaml": "^5.5.0",
+    "mysql2": "^3.24.6",
     "path": "^0.12.7"
   }
 }

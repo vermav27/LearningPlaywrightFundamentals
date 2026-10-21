@@ -25,8 +25,6 @@ test.describe("Verify login functionality", () => {
 
         }
 
-
-
     })
 
 })
