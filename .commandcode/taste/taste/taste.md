@@ -26,4 +26,4 @@
 - Prefers ESM `import` statements over CommonJS `require()` in TypeScript spec files, and dislikes mixing the two styles in one file. Confidence: 0.7
 - Prefers Node built-in modules over third-party packages — e.g., using `node:fs`/`node:path` instead of `fs-extra`, and removing the now-unused dependency from `package.json` rather than adding type packages. Confidence: 0.7
 - Prefers Node built-ins imported with the `node:` protocol prefix (e.g., `import fs from 'node:fs'`, `node:path`) so they resolve to Node's built-in modules with types from `@types/node`. Confidence: 0.6
-- Asks for commit-and-push as a standalone task (e.g., "commit and push the code") and expects the agent to inspect repo state, confirm scope for ambiguous cases, then commit to the working branch (e.g., `task`) and push to `origin`. Confidence: 0.5
+- Repeatedly asks for commit-and-push as a standalone, terse task (e.g., "commit and push the code") and expects the agent to inspect repo state (status/log/diff), decide what belongs in the commit, then commit and push the current branch to `origin`. Confidence: 0.6
