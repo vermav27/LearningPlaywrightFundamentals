@@ -288,6 +288,7 @@ The current test files cover:
 
 ### Page Object Model
 
+- `tests/20_POM/59_VerifyLogin.spec.ts`: verifies the OrangeHRM login page and successful login through `LoginPage`
 - `tests/20_POM/Pages/LoginPage.ts`: OrangeHRM login locators and reusable navigation, login, and verification actions
 - `tests/20_POM/Pages/DashboardPage.ts`: shared dashboard locator inherited by `LoginPage`
 
@@ -415,7 +416,15 @@ Run the MySQL example after providing `MYSQL_HOST` and, when needed, `MYSQL_PORT
 npx playwright test tests/19_DataDriven/57_TestUsingDB.spec.ts
 ```
 
-The database suite skips itself when `MYSQL_HOST` is not configured. The POM folder currently contains reusable page classes rather than an executable `.spec.ts` test. Because `screenshot`, `video`, and `trace` are all set to `"on"`, every executed test retains these artifacts and can consume significant disk space.
+The database suite skips itself when `MYSQL_HOST` is not configured.
+
+Run the Page Object Model login tests (uses `USERNAME` and `PASSWORD` from `.env`):
+
+```bash
+npx playwright test tests/20_POM/59_VerifyLogin.spec.ts
+```
+
+Because `screenshot`, `video`, and `trace` are all set to `"on"`, every executed test retains these artifacts and can consume significant disk space.
 
 Run tests from a specific folder:
 

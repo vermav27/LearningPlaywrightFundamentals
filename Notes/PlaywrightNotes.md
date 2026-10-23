@@ -68,6 +68,7 @@ Source files currently covered:
 - `tests/19_DataDriven/56_RunningTestForMulpleData.spec.ts`
 - `tests/19_DataDriven/57_TestUsingDB.spec.ts`
 - `tests/19_DataDriven/58_TestUsingcsv.spec.ts`
+- `tests/20_POM/59_VerifyLogin.spec.ts`
 - `tests/20_POM/Pages/DashboardPage.ts`
 - `tests/20_POM/Pages/LoginPage.ts`
 - `utils/CustomReporter.ts`
@@ -2297,7 +2298,7 @@ Design considerations:
 - A login page is not a type of dashboard page, so composition is normally clearer than `LoginPage extends DashboardPage`. The test can own both objects, or `loginToApp()` can return a new `DashboardPage` after successful navigation.
 - Keep assertions in page objects when they verify that a page/action reached its expected state; keep scenario-specific business assertions in tests.
 - Locators are lazy, so constructing them does not query the DOM and does not need `await`.
-- The `tests/20_POM` folder currently has page classes only. It needs a `.spec.ts` file before Playwright will execute a POM test.
+- `59_VerifyLogin.spec.ts` creates a fresh `LoginPage` with the test's `page` fixture and awaits each page-object action. Its first test verifies that the login page opens; its second test verifies a successful login with credentials loaded from `.env`.
 
 ### 62. Screenshot, Video, and Trace Configuration
 
