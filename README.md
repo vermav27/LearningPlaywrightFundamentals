@@ -1,6 +1,6 @@
 # Learning Playwright Fundamentals
 
-This repository contains beginner-friendly Playwright automation examples written with TypeScript. It covers Playwright basics, browser-context-page handling, test options, annotations, `test.describe()`, locator commands, assertions, shadow DOM, file upload and download, scrolling, test hooks, and interview-focused notes.
+This repository contains beginner-friendly Playwright automation examples written with TypeScript. It covers Playwright basics, browser-context-page handling, test options, annotations, `test.describe()`, locator commands, assertions, shadow DOM, file upload and download, scrolling, test hooks, data-driven testing, the Page Object Model, and interview-focused notes.
 
 ## Repository Contents
 
@@ -26,9 +26,14 @@ This repository contains beginner-friendly Playwright automation examples writte
 │   ├── 15_FileUpload_Download/
 │   ├── 16_Scroll_ToElement/
 │   ├── 17_Assertions/
-│   └── 18_TestHooks/
+│   ├── 18_TestHooks/
+│   ├── 19_DataDriven/
+│   └── 20_POM/
 ├── utils/
-│   └── CustomReporter.ts
+│   ├── CustomReporter.ts
+│   ├── csvReader.ts
+│   ├── dbReader.ts
+│   └── yamlReader.ts
 ├── playwright.config.ts
 ├── package.json
 └── README.md
@@ -60,6 +65,10 @@ This repository contains beginner-friendly Playwright automation examples writte
 - Added scrolling examples: `scrollIntoViewIfNeeded()`, `window.scrollBy()`/`scrollTo()` through `page.evaluate()`, and lazy-loaded list handling.
 - Added an assertions cheat sheet covering locator, page, generic, soft, polling, and asymmetric assertions.
 - Added test hooks (`beforeAll`, `afterAll`, `beforeEach`, `afterEach`), `test.step()`, and `test.describe.serial()`, with a hooks reference document.
+- Added data-driven examples that import JSON directly, parse and write JSON with Node's `fs` module, and run login checks for multiple data rows.
+- Added reusable typed data readers for CSV, YAML, and MySQL, including environment-based database configuration, parameterized SQL, and conditional suite skipping.
+- Added an initial Page Object Model for OrangeHRM with typed `Page`/`Locator` fields, constructor-based locator initialization, reusable page actions, and page-class inheritance.
+- Enabled screenshots, videos, and traces for every test run in `playwright.config.ts`.
 - The notes file has two main sections:
   - **Notes**: Playwright concepts used in the current `.ts` files with explanations and examples.
   - **Interview Questions**: Playwright with JavaScript/TypeScript interview questions and answers.
@@ -136,6 +145,15 @@ The current test files cover:
 - Test hooks: `test.beforeAll()`, `test.afterAll()`, `test.beforeEach()`, and `test.afterEach()` with hook titles
 - Grouping report steps with `test.step()`
 - Serial execution with `test.describe.serial()`
+- Data-driven testing with direct JSON imports and `JSON.parse()`/`JSON.stringify()`
+- Reading and writing files with Node's `fs` and `path` modules
+- Creating one test per CSV row at test-collection time
+- Typed CSV and YAML readers with reusable row interfaces
+- Asynchronous MySQL test data with `mysql2/promise`, `beforeAll()`, parameterized queries, and `finally` cleanup
+- Conditional database-suite execution with `test.skip()` and environment variables
+- Page Object Model classes with typed locators and reusable page actions
+- TypeScript class inheritance with `extends` and `super()`
+- Screenshot, video, and trace retention configured in `playwright.config.ts`
 
 ## Test Files
 
@@ -255,6 +273,24 @@ The current test files cover:
 - `tests/18_TestHooks/51_TestStep.spec.ts`: OrangeHRM login-page checks using all four hooks, `test.step()`, and `test.describe.serial()`
 - `tests/18_TestHooks/TestHook_Brief.md`: hook reference covering execution order, scope, `testInfo`, retries, serial mode, timeouts, and hooks vs fixtures
 
+### Data-Driven Testing
+
+- `tests/19_DataDriven/01_ReadingJson/52_datadriven.spec.ts`: imports nested JSON data and reads object/array values
+- `tests/19_DataDriven/02_TestingUsingJSON/53_TestinLogin.spec.ts`: valid and invalid OrangeHRM login tests driven by JSON
+- `tests/19_DataDriven/54_JSONToJSO.spec.ts`: compares direct JSON import with `fs.readFileSync()` and `JSON.parse()`
+- `tests/19_DataDriven/55_WritingDataToJsonFile.spec.ts`: serializes a JavaScript object with `JSON.stringify()` and writes JSON to disk
+- `tests/19_DataDriven/56_RunningTestForMulpleData.spec.ts`: loops through multiple JSON login records
+- `tests/19_DataDriven/57_TestUsingDB.spec.ts`: loads active login rows asynchronously from MySQL in `beforeAll()`
+- `tests/19_DataDriven/58_TestUsingcsv.spec.ts`: generates a separate Playwright test for each CSV row
+- `utils/csvReader.ts`: synchronous CSV-to-object reader used during test collection
+- `utils/yamlReader.ts`: generic typed YAML-list reader and shared `LoginRow` interface
+- `utils/dbReader.ts`: typed MySQL connection, query, row-mapping, and configuration helpers
+
+### Page Object Model
+
+- `tests/20_POM/Pages/LoginPage.ts`: OrangeHRM login locators and reusable navigation, login, and verification actions
+- `tests/20_POM/Pages/DashboardPage.ts`: shared dashboard locator inherited by `LoginPage`
+
 ## Playwright Notes
 
 Read [Notes/PlaywrightNotes.md](Notes/PlaywrightNotes.md) before interview preparation or revision. It is designed for Playwright with JavaScript/TypeScript interview preparation for a QA automation profile with strong testing experience.
@@ -366,6 +402,20 @@ npx playwright test tests/18_TestHooks
 ```
 
 `47_download.spec.ts` saves the downloaded file to a local absolute path, so update that path before running it on another machine. `tests/17_Assertions` contains only a reference document, so there is nothing to run there.
+
+Run the file-based data-driven examples:
+
+```bash
+npx playwright test tests/19_DataDriven --grep-invert "DDT MySQL"
+```
+
+Run the MySQL example after providing `MYSQL_HOST` and, when needed, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DATABASE`:
+
+```bash
+npx playwright test tests/19_DataDriven/57_TestUsingDB.spec.ts
+```
+
+The database suite skips itself when `MYSQL_HOST` is not configured. The POM folder currently contains reusable page classes rather than an executable `.spec.ts` test. Because `screenshot`, `video`, and `trace` are all set to `"on"`, every executed test retains these artifacts and can consume significant disk space.
 
 Run tests from a specific folder:
 
