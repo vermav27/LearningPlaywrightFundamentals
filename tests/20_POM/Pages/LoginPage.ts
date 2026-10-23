@@ -1,7 +1,13 @@
 import { expect, Locator, Page } from '@playwright/test';
 import { dashBoard } from './DashboardPage';
+import 'dotenv/config';
 
 export class LoginPage extends dashBoard {
+
+
+    readonly user: string = process.env.USERNAME ?? '';
+    readonly pass: string = process.env.PASSWORD ?? '';
+
 
     // Locators
     readonly page: Page;
@@ -24,14 +30,14 @@ export class LoginPage extends dashBoard {
     }
 
     async goto() {
-        await this.page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login");
+        await this.page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { "waitUntil": "load" });
         await expect(this.loginLabel).toBeVisible();
     }
 
     async loginToApp() {
 
-        await this.userName.fill("Admin");
-        await this.password.fill("admin123");
+        await this.userName.fill(this.user);
+        await this.password.fill(this.pass);
         await this.loginBTN.click();
         await this.page.waitForLoadState("load");
 
