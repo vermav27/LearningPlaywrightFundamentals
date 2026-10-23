@@ -61,7 +61,19 @@ Source files currently covered:
 - `tests/17_Assertions/Assertions_CheatSheet.md`
 - `tests/18_TestHooks/51_TestStep.spec.ts`
 - `tests/18_TestHooks/TestHook_Brief.md`
+- `tests/19_DataDriven/01_ReadingJson/52_datadriven.spec.ts`
+- `tests/19_DataDriven/02_TestingUsingJSON/53_TestinLogin.spec.ts`
+- `tests/19_DataDriven/54_JSONToJSO.spec.ts`
+- `tests/19_DataDriven/55_WritingDataToJsonFile.spec.ts`
+- `tests/19_DataDriven/56_RunningTestForMulpleData.spec.ts`
+- `tests/19_DataDriven/57_TestUsingDB.spec.ts`
+- `tests/19_DataDriven/58_TestUsingcsv.spec.ts`
+- `tests/20_POM/Pages/DashboardPage.ts`
+- `tests/20_POM/Pages/LoginPage.ts`
 - `utils/CustomReporter.ts`
+- `utils/csvReader.ts`
+- `utils/dbReader.ts`
+- `utils/yamlReader.ts`
 
 ## Notes
 
@@ -2138,6 +2150,180 @@ Improvements to keep in mind:
 - The two tests do not depend on each other, so serial mode is not needed. Plain `test.describe()` lets them run in parallel.
 - The `afterEach` repeats the `beforeEach` check. A more useful `afterEach` captures evidence on failure or cleans up test data.
 
+### 59. Data-Driven Testing With JSON
+
+Data-driven testing separates test logic from input and expected-result data. The same workflow can then run with valid, invalid, boundary, or role-specific records without duplicating all browser actions.
+
+TypeScript can import a JSON file directly:
+
+```ts
+import loginData from './02_TestingUsingJSON/data.json';
+
+await username.fill(loginData.validData.username);
+await password.fill(loginData.validData.password);
+```
+
+Node can also read JSON at runtime:
+
+```ts
+const filePath = path.join(__dirname, '02_TestingUsingJSON', 'data.json');
+const fileText = fs.readFileSync(filePath, 'utf-8');
+const data = JSON.parse(fileText);
+```
+
+Direct imports are concise and are loaded when the module is evaluated. Reading with `fs` is useful when the path is dynamic or when the test must control exactly when the file is loaded. `JSON.parse()` converts JSON text to a JavaScript value; `JSON.stringify()` converts a JavaScript value to JSON text:
+
+```ts
+const jsonText = JSON.stringify({ name: 'Vineet', age: 34 }, null, 2);
+fs.writeFileSync(outputPath, jsonText, 'utf-8');
+```
+
+For an array of records, one test can loop over every row, as in `56_RunningTestForMulpleData.spec.ts`. A better reporting pattern is usually one Playwright test per row:
+
+```ts
+for (const row of loginData) {
+  test(`login: ${row.description}`, async ({ page }) => {
+    // arrange, act, and assert this row
+  });
+}
+```
+
+Separate tests give each record its own status, retry, duration, trace, screenshot, and report entry. A single test with an internal loop stops at the first failure and reports all rows under one result. When generating tests in a loop, define them synchronously at file scope or inside a synchronous `test.describe()` callback; do not fetch asynchronous data while Playwright is collecting tests.
+
+Improvements to keep in mind:
+
+- Do not request the `page` fixture in a pure JSON read/write test unless a browser is actually needed.
+- Use a project-relative output path, preferably `testInfo.outputPath()`, instead of writing `output.json` into whichever directory launched the command.
+- Give test data an interface so malformed records are caught by TypeScript.
+- Keep credentials and secrets out of committed JSON. Use environment variables or a secret manager.
+- In a loop that submits multiple logins on one page, reset the application to the login URL before every row so one successful login does not affect the next record.
+
+### 60. CSV, YAML, and Database Data Sources
+
+`utils/csvReader.ts` reads the CSV synchronously because `58_TestUsingcsv.spec.ts` needs the rows while Playwright is collecting test definitions:
+
+```ts
+const loginData = readCSV(path.join(__dirname, 'test-data', 'login-data.csv'));
+
+for (const data of loginData) {
+  test(`Login with: ${data.description}`, async ({ page }) => {
+    // each CSV row becomes a separate test
+  });
+}
+```
+
+The first CSV line becomes the property names, and each remaining line becomes a `Record<string, string>`. This simple `split(',')` implementation is suitable for basic learning data, but it does not correctly parse quoted commas, embedded newlines, or escaped quotes. Use a standards-compliant CSV library for production data.
+
+`utils/yamlReader.ts` uses `js-yaml` and a generic return type:
+
+```ts
+const rows = readYAML<LoginRow>('test-data/login-data.yaml');
+```
+
+It checks that the top-level YAML value is an array. The utility is ready for a YAML-driven test, although the repository does not yet contain a YAML data file or YAML spec. A TypeScript cast documents the intended shape but does not validate runtime fields; use a schema library when untrusted or frequently changing data needs strict validation.
+
+Database data is different because MySQL access is asynchronous. `57_TestUsingDB.spec.ts` loads its rows in `beforeAll()` and uses them inside one test:
+
+```ts
+let rows: LoginRow[] = [];
+
+test.beforeAll(async () => {
+  rows = await readLoginDataFromDB();
+});
+```
+
+The helper uses `mysql2/promise`, configuration from environment variables, `connection.execute()` with `?` placeholders, and a `finally` block that always closes the connection:
+
+```ts
+const [rows] = await connection.execute(sql, params);
+// ...
+await connection.end();
+```
+
+Parameterized queries keep data separate from SQL and reduce SQL-injection risk. Mapping database `snake_case` columns to the shared `LoginRow` shape keeps the test independent of the table's naming convention. `test.skip(!isDbConfigured(), ...)` makes the database suite opt-in when `MYSQL_HOST` is absent.
+
+Collection-time limitation: rows fetched in `beforeAll()` cannot generate separate `test()` calls, because Playwright has already collected the suite before the hook runs. The current database test therefore uses `test.step()` for each row. To create one test per database row, export a snapshot before the run, use a global setup process to create a local data file, or otherwise make the data synchronously available during collection.
+
+### 61. Page Object Model (POM)
+
+The Page Object Model stores page locators and page-specific operations in classes. Tests call business-level methods instead of repeating selectors and low-level actions.
+
+A more reusable version of the basic pattern introduced by `LoginPage.ts` is:
+
+```ts
+export class LoginPage {
+  readonly page: Page;
+  readonly userName: Locator;
+  readonly password: Locator;
+  readonly loginButton: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.userName = page.locator("//input[@name='username']");
+    this.password = page.locator("//input[@name='password']");
+    this.loginButton = page.locator("//button[@type='submit']");
+  }
+
+  async loginToApp(username: string, password: string) {
+    await this.userName.fill(username);
+    await this.password.fill(password);
+    await this.loginButton.click();
+  }
+}
+```
+
+The repository's actual `LoginPage` extends `dashBoard`, calls `super(page)`, and inherits `dashboardLabel`. These are TypeScript inheritance concepts:
+
+- `extends` creates a child class that inherits accessible members from its parent.
+- `super(page)` runs the parent constructor and must be called before using `this` in a derived constructor.
+- `readonly` prevents a field from being assigned again after construction; the referenced Playwright `Locator` can still be used normally.
+- Typing fields as `Page` and `Locator` gives editor support and compile-time checking.
+
+A test can instantiate the object with Playwright's `page` fixture:
+
+```ts
+test('user logs in', async ({ page }) => {
+  const loginPage = new LoginPage(page);
+  await loginPage.goto();
+  await loginPage.loginToApp();
+  await loginPage.verifyUserSuccessfullyLoggedIn();
+});
+```
+
+Design considerations:
+
+- Prefer PascalCase class names, so `dashBoard` should be `DashboardPage`.
+- Pass credentials into `loginToApp(username, password)` or load them securely; hard-coded credentials make the object less reusable.
+- A login page is not a type of dashboard page, so composition is normally clearer than `LoginPage extends DashboardPage`. The test can own both objects, or `loginToApp()` can return a new `DashboardPage` after successful navigation.
+- Keep assertions in page objects when they verify that a page/action reached its expected state; keep scenario-specific business assertions in tests.
+- Locators are lazy, so constructing them does not query the DOM and does not need `await`.
+- The `tests/20_POM` folder currently has page classes only. It needs a `.spec.ts` file before Playwright will execute a POM test.
+
+### 62. Screenshot, Video, and Trace Configuration
+
+The shared `use` configuration currently retains all three artifacts for every test:
+
+```ts
+use: {
+  screenshot: 'on',
+  video: 'on',
+  trace: 'on',
+  headless: false,
+}
+```
+
+This is helpful while learning because every run has full debugging evidence. It also increases execution time and disk usage. A common CI-oriented policy is:
+
+```ts
+use: {
+  screenshot: 'only-on-failure',
+  video: 'retain-on-failure',
+  trace: 'on-first-retry',
+}
+```
+
+Screenshots capture a point in time, video shows the visible sequence, and a trace combines actions, DOM snapshots, network details, console messages, and source information for inspection in Trace Viewer. Choose the retention policy based on debugging needs, run volume, and storage limits.
+
 ## Interview Questions
 
 ### Playwright Fundamentals
@@ -3871,3 +4057,97 @@ Hooks suit simple setup local to one file or `describe` block. Use a custom fixt
 #### 263. Should `beforeEach` contain assertions?
 
 A quick check that setup worked, such as the login heading being visible, is fine and makes setup failures obvious. Use a web-first assertion such as `await expect(heading).toHaveText('Login')`, and keep the main checks in the test body so the report shows what the test is about.
+
+### Data-Driven Testing
+
+#### 264. What is data-driven testing?
+
+It is a design in which input and expected results live outside the test workflow. The same actions run against multiple JSON, CSV, YAML, database, API, or generated records, reducing duplicated test code and making coverage easier to expand.
+
+#### 265. What is the difference between importing JSON and reading it with `fs`?
+
+A JSON import is concise and is resolved when the test module loads. `fs.readFileSync()` plus `JSON.parse()` gives explicit control over the path and load time and can handle dynamically chosen files. Both approaches produce JavaScript objects; `JSON.parse()` is required only when starting from JSON text.
+
+#### 266. What do `JSON.parse()` and `JSON.stringify()` do?
+
+`JSON.parse(text)` converts valid JSON text into a JavaScript value. `JSON.stringify(value)` converts a serializable JavaScript value into JSON text. Functions, `undefined`, and symbols are not represented normally in JSON, and circular references cause `JSON.stringify()` to throw.
+
+#### 267. Should multiple data rows run inside one test or as separate tests?
+
+Prefer one test per row when the data is available during test collection. Each row then gets its own result, retry, timing, artifacts, and report entry. A loop inside one test can be useful for asynchronously loaded data, but it stops on the first uncaught failure and all rows share one test result.
+
+#### 268. Why is a synchronous CSV reader used before the tests run?
+
+Playwright must discover every `test()` while loading the file. Synchronous file reading makes the rows available immediately so the file can declare one test per row. Asynchronous I/O belongs in hooks or tests, but values loaded there arrive too late to add new test definitions.
+
+#### 269. What limitation does the repository's simple CSV parser have?
+
+It splits lines on newline and fields on commas, so it cannot correctly handle quoted commas, quoted newlines, or escaped quotes. A production framework should use an RFC-compatible CSV parser and validate required columns.
+
+#### 270. Does a TypeScript cast validate JSON or YAML at runtime?
+
+No. `as LoginRow[]` only tells the TypeScript compiler how to treat the value. It does not check that fields exist or have the expected runtime types. Use explicit checks or a schema validator for runtime validation.
+
+#### 271. Why is database data loaded in `beforeAll()`?
+
+The database query is asynchronous and the same result is reused by the suite. `beforeAll()` awaits it once before the tests execute. The hook may run once per worker and may run again after a worker restart, so the query and setup must be safe to repeat.
+
+#### 272. Why use parameterized SQL queries?
+
+Placeholders such as `WHERE is_active = ?` keep parameter values separate from SQL syntax. The driver binds and escapes the values, which reduces SQL-injection risk and avoids manual quoting mistakes.
+
+#### 273. Why close a database connection in `finally`?
+
+`finally` runs whether the query succeeds or throws, preventing leaked connections. For larger suites, a managed pool can reuse connections, but it must still be closed during global teardown.
+
+#### 274. How do you skip a database suite when configuration is unavailable?
+
+Declare the condition while defining the suite, for example `test.skip(!isDbConfigured(), 'MYSQL_HOST is not set')`. This reports a clear skip instead of a connection failure. Secrets should come from environment variables or a secret manager, not committed source files.
+
+#### 275. Can rows fetched in `beforeAll()` create separate Playwright tests?
+
+No. Test collection is complete before hooks execute. Use steps inside one test, generate a data snapshot before collection, or make the records synchronously available if every row must become a separate test.
+
+### Page Object Model
+
+#### 276. What is the Page Object Model?
+
+POM is a design pattern in which a class represents a page or reusable component. It owns locators and exposes meaningful operations such as `goto()`, `login()`, or `addEmployee()`, reducing selector duplication in specs.
+
+#### 277. What should a Playwright page-object constructor receive?
+
+Usually a typed `Page` or, for a component, a root `Locator`. The constructor stores it and initializes lazy locators. It should not normally perform asynchronous navigation because constructors cannot be awaited.
+
+#### 278. Why type page-object fields as `Page` and `Locator`?
+
+Types catch invalid API usage during development, improve autocomplete, document class contracts, and make refactoring safer. `readonly` is also useful for references that should be initialized once in the constructor.
+
+#### 279. What do `extends` and `super()` mean in the current POM classes?
+
+`LoginPage extends dashBoard` makes `LoginPage` inherit fields and methods from `dashBoard`. `super(page)` invokes the parent constructor so it can initialize `page` and `dashboardLabel`; a derived constructor must call `super()` before accessing `this`.
+
+#### 280. Is inheritance always the best way to connect page objects?
+
+No. Inheritance should represent an “is-a” relationship. A login page is not a dashboard, so composition is clearer: create separate `LoginPage` and `DashboardPage` objects, or return a `DashboardPage` after login. A shared base class is appropriate only for behavior genuinely common to many pages.
+
+#### 281. Should page objects contain assertions?
+
+They may contain reusable page-state checks, such as verifying that navigation reached the dashboard. Scenario-specific business expectations usually belong in the spec so test intent remains visible. Teams should choose a consistent boundary.
+
+#### 282. Why should credentials be parameters instead of hard-coded in `loginToApp()`?
+
+Parameters let the same action test valid, invalid, role-specific, and environment-specific users. Sensitive values can then come from environment variables or fixtures instead of source control.
+
+#### 283. Do locators need `await` when they are created in a page object?
+
+No. `page.locator()` and `getBy*()` return lazy `Locator` objects synchronously. Use `await` only for asynchronous actions and queries such as `click()`, `fill()`, `innerText()`, and web-first assertions.
+
+### Test Artifacts
+
+#### 284. What is the difference between screenshots, videos, and traces?
+
+A screenshot captures one visual moment. A video records the visible test sequence. A trace provides the richest debugging data: actions, timings, DOM snapshots, network activity, console output, and source context that can be explored in Trace Viewer.
+
+#### 285. What is the cost of setting screenshot, video, and trace to `on`?
+
+Every test retains every artifact, which increases disk use and can slow large suites. It is convenient for learning, while CI commonly uses `only-on-failure`, `retain-on-failure`, and `on-first-retry` to balance evidence with storage and performance.
